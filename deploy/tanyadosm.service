@@ -1,0 +1,23 @@
+[Unit]
+Description=TanyaDOSM web application
+After=network-online.target ollama.service
+Wants=network-online.target ollama.service
+
+[Service]
+Type=simple
+User=tanyadosm
+Group=tanyadosm
+WorkingDirectory=/opt/tanyadosm
+EnvironmentFile=/opt/tanyadosm/.env
+Environment=HOME=/opt/tanyadosm
+ExecStart=/opt/tanyadosm/.venv/bin/uvicorn askdosm.api.app:app --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/tanyadosm/.askdosm-cache
+
+[Install]
+WantedBy=multi-user.target
