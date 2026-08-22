@@ -1,0 +1,102 @@
+[
+  {
+    "dataset_id": "population_malaysia",
+    "title": "Population Table: Malaysia",
+    "description": "Annual national population by sex, age group, and ethnicity.",
+    "domain": "demography",
+    "aliases": ["malaysia population", "national population", "jumlah penduduk malaysia", "populasi malaysia"],
+    "dimensions": ["date", "sex", "age", "ethnicity"],
+    "measures": [{"name": "population", "aliases": ["population", "people", "penduduk", "populasi"], "unit": "thousand people"}],
+    "frequency": "annual",
+    "geography_level": "national",
+    "source_agency": "Department of Statistics Malaysia",
+    "source_url": "https://data.gov.my/data-catalogue/population_malaysia",
+    "parquet_url": "https://storage.dosm.gov.my/population/population_malaysia.parquet",
+    "caveats": ["Census years and intercensal estimates use different production methods.", "Detailed totals may differ slightly because of rounding."],
+    "expected_schema": {"date": "date", "sex": "string", "age": "string", "ethnicity": "string", "population": "number"},
+    "default_filters": {"sex": "both", "age": "overall", "ethnicity": "overall"}
+  },
+  {
+    "dataset_id": "population_state",
+    "title": "Population Table: States",
+    "description": "Annual population by Malaysian state, sex, age group, and ethnicity.",
+    "domain": "demography",
+    "aliases": ["state population", "population by state", "penduduk negeri", "populasi negeri", "ranking population"],
+    "dimensions": ["date", "state", "sex", "age", "ethnicity"],
+    "measures": [{"name": "population", "aliases": ["population", "people", "penduduk", "populasi"], "unit": "thousand people"}],
+    "frequency": "annual",
+    "geography_level": "state",
+    "source_agency": "Department of Statistics Malaysia",
+    "source_url": "https://data.gov.my/data-catalogue/population_state",
+    "parquet_url": "https://storage.dosm.gov.my/population/population_state.parquet",
+    "caveats": ["Census years and intercensal estimates use different production methods.", "Detailed totals may differ slightly because of rounding."],
+    "expected_schema": {"date": "date", "state": "string", "sex": "string", "age": "string", "ethnicity": "string", "population": "number"},
+    "default_filters": {"sex": "both", "age": "overall", "ethnicity": "overall"}
+  },
+  {
+    "dataset_id": "lfs_month",
+    "title": "Monthly Principal Labour Force Statistics",
+    "description": "Monthly national labour force, employment, unemployment and participation indicators.",
+    "domain": "labour",
+    "aliases": ["malaysia unemployment", "national unemployment", "labour force", "tenaga buruh", "pengangguran malaysia"],
+    "dimensions": ["date"],
+    "measures": [
+      {"name": "lf", "aliases": ["labour force", "tenaga buruh"], "unit": "thousand people"},
+      {"name": "lf_employed", "aliases": ["employed", "bekerja"], "unit": "thousand people"},
+      {"name": "lf_unemployed", "aliases": ["unemployed", "penganggur"], "unit": "thousand people"},
+      {"name": "u_rate", "aliases": ["unemployment rate", "kadar pengangguran"], "unit": "percent"},
+      {"name": "p_rate", "aliases": ["participation rate", "kadar penyertaan"], "unit": "percent"}
+    ],
+    "frequency": "monthly",
+    "geography_level": "national",
+    "source_agency": "Department of Statistics Malaysia",
+    "source_url": "https://data.gov.my/data-catalogue/lfs_month",
+    "parquet_url": "https://storage.dosm.gov.my/labour/lfs_month.parquet",
+    "caveats": ["The population benchmark changes from the 2010 Census basis to the 2020 Census basis in 2025.", "Components may not sum exactly because of rounding."],
+    "expected_schema": {"date": "date", "lf": "number", "lf_employed": "number", "lf_unemployed": "number", "lf_outside": "number", "u_rate": "number", "p_rate": "number", "ep_ratio": "number"},
+    "default_filters": {}
+  },
+  {
+    "dataset_id": "lfs_qtr_state",
+    "title": "Quarterly Principal Labour Force Statistics by State",
+    "description": "Quarterly labour force, employment, unemployment and participation indicators by state.",
+    "domain": "labour",
+    "aliases": ["state unemployment", "unemployment by state", "state labour force", "pengangguran negeri", "tenaga buruh negeri"],
+    "dimensions": ["date", "state"],
+    "measures": [
+      {"name": "lf", "aliases": ["labour force", "tenaga buruh"], "unit": "thousand people"},
+      {"name": "lf_employed", "aliases": ["employed", "bekerja"], "unit": "thousand people"},
+      {"name": "lf_unemployed", "aliases": ["unemployed", "penganggur"], "unit": "thousand people"},
+      {"name": "u_rate", "aliases": ["unemployment rate", "kadar pengangguran"], "unit": "percent"},
+      {"name": "p_rate", "aliases": ["participation rate", "kadar penyertaan"], "unit": "percent"}
+    ],
+    "frequency": "quarterly",
+    "geography_level": "state",
+    "source_agency": "Department of Statistics Malaysia",
+    "source_url": "https://data.gov.my/data-catalogue/lfs_qtr_state",
+    "parquet_url": "https://storage.dosm.gov.my/labour/lfs_qtr_state.parquet",
+    "caveats": ["The population benchmark changes from the 2010 Census basis to the 2020 Census basis in 2025.", "Components may not sum exactly because of rounding."],
+    "expected_schema": {"date": "date", "state": "string", "lf": "number", "lf_employed": "number", "lf_unemployed": "number", "lf_outside": "number", "u_rate": "number", "p_rate": "number"},
+    "default_filters": {}
+  },
+  {
+    "dataset_id": "cpi_state_inflation",
+    "title": "Monthly CPI Inflation by State & Division",
+    "description": "Monthly year-on-year and month-on-month consumer price inflation by state and expenditure division.",
+    "domain": "prices",
+    "aliases": ["state inflation", "inflation by state", "consumer price inflation", "inflasi negeri", "kadar inflasi"],
+    "dimensions": ["date", "state", "division"],
+    "measures": [
+      {"name": "inflation_yoy", "aliases": ["inflation", "year-on-year inflation", "inflasi", "inflasi tahunan"], "unit": "percent"},
+      {"name": "inflation_mom", "aliases": ["monthly inflation", "month-on-month inflation", "inflasi bulanan"], "unit": "percent"}
+    ],
+    "frequency": "monthly",
+    "geography_level": "state",
+    "source_agency": "Department of Statistics Malaysia",
+    "source_url": "https://data.gov.my/data-catalogue/cpi_state_inflation",
+    "parquet_url": "https://storage.dosm.gov.my/cpi/cpi_2d_state_inflation.parquet",
+    "caveats": ["CPI inflation represents an average basket and may differ from an individual's experienced inflation."],
+    "expected_schema": {"date": "date", "state": "string", "division": "string", "inflation_yoy": "number", "inflation_mom": "number"},
+    "default_filters": {"division": "overall"}
+  }
+]
