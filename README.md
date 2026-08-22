@@ -1,23 +1,24 @@
 # AskDOSM
 
-AskDOSM is a local natural-language analytics assistant for five curated Malaysian public-statistics datasets. It uses OpenAI structured outputs for intent and planning, LangGraph for validation/retry routing, and deterministic Pandas/DuckDB-compatible operations for every numeric result.
+AskDOSM is a local natural-language analytics assistant for five curated Malaysian public-statistics datasets. It uses local Ollama models for structured intent and planning, LangGraph for validation/retry routing, and deterministic Pandas/DuckDB-compatible operations for every numeric result.
 
 ## Requirements and setup
 
 - Windows with Python 3.14.x (developed against Python 3.14.6)
 - [`uv`](https://docs.astral.sh/uv/)
-- An OpenAI API key
+- [Ollama for Windows](https://ollama.com/download)
 
 ```powershell
 uv sync
+ollama pull qwen3:8b
+ollama pull embeddinggemma
 Copy-Item .env.example .env
-# Add OPENAI_API_KEY to .env
 uv run streamlit run app.py
 ```
 
 The package rejects interpreters outside Python 3.14. Run all project commands through `uv run` to use the pinned environment. Dependency versions are captured in `uv.lock`.
 
-The verified Python 3.14.6 environment resolves Streamlit 1.62.0, LangGraph 1.2.11, LangChain OpenAI 1.6.0, DuckDB 1.5.5, Pandas 3.0.5, PyArrow 25.0.1, Plotly 6.9.0, NumPy 2.5.2, and Pydantic 2.13.4.
+The verified Python 3.14.6 environment resolves Streamlit, LangGraph, LangChain Ollama, DuckDB, Pandas, PyArrow, Plotly, NumPy, and Pydantic versions in `uv.lock`.
 
 ## Supported data
 
@@ -35,7 +36,7 @@ Source files are downloaded from official DOSM Parquet URLs. They are validated 
 
 ```text
 Streamlit
-   -> parse intent (structured OpenAI output)
+   -> parse intent (structured Ollama output)
    -> hybrid catalogue search (aliases + metadata embeddings)
    -> select and inspect registered dataset
    -> constrained structured query plan
@@ -52,10 +53,10 @@ Each question is standalone. The UI keeps messages only to display the current b
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `OPENAI_API_KEY` | required | OpenAI authentication |
-| `ASKDOSM_CHAT_MODEL` | `gpt-5-mini` | Intent and query-plan model |
-| `ASKDOSM_EMBEDDING_MODEL` | `text-embedding-3-small` | Catalogue metadata embeddings |
-| `ASKDOSM_REQUEST_TIMEOUT` | `30` | OpenAI timeout in seconds |
+| `ASKDOSM_CHAT_MODEL` | `qwen3:8b` | Local intent and query-plan model |
+| `ASKDOSM_EMBEDDING_MODEL` | `embeddinggemma` | Local catalogue metadata embeddings |
+| `ASKDOSM_OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama service endpoint |
+| `ASKDOSM_REQUEST_TIMEOUT` | `30` | Reserved request timeout in seconds |
 | `ASKDOSM_CACHE_DIR` | `.askdosm-cache` | Local public-data cache |
 | `ASKDOSM_CACHE_TTL_HOURS` | `24` | Refresh interval |
 
@@ -74,7 +75,7 @@ $env:ASKDOSM_RUN_LIVE_TESTS = "1"
 uv run pytest -m integration
 ```
 
-Ordinary tests use in-memory fixtures and mocked model responses. Tests marked `integration` may access live DOSM or OpenAI services and are not part of the default offline suite.
+Ordinary tests use in-memory fixtures and mocked model responses. Tests marked `integration` may access live DOSM or the local Ollama service and are not part of the default offline suite.
 
 The benchmark in `evals/questions.json` contains 50 cases. `evals/evaluate.py` validates its structure and category distribution; running live model scoring is intentionally opt-in because it incurs API calls.
 

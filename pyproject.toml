@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14,<3.15"
 dependencies = [
   "duckdb>=1.5.0",
-  "langchain-openai>=1.0.0",
+  "langchain-ollama>=1.0.0",
   "langgraph>=1.0.0",
   "numpy>=2.3.0",
   "pandas>=2.3.0",
@@ -34,6 +34,5 @@ packages = ["src/askdosm"]
 addopts = "-q"
 testpaths = ["tests"]
 markers = [
-  "integration: requires network access and/or OpenAI credentials",
+  "integration: requires live DOSM access and/or a running Ollama service",
 ]
-

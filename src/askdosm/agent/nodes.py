@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -42,7 +43,46 @@ class NodeServices:
 def parse_question(state: AgentState, services: NodeServices) -> dict:
     parser = services.llm.with_structured_output(QuestionIntent)
     intent = parser.invoke([("system", INTENT_SYSTEM), ("human", state["question"])])
+    intent = _normalize_intent(state["question"], intent)
     return {"intent": intent, "retry_count": state.get("retry_count", 0), "errors": []}
+
+
+def _normalize_intent(question: str, intent: QuestionIntent) -> QuestionIntent:
+    """Repair obvious omissions deterministically without inventing statistical facts."""
+    text = question.casefold()
+    updates: dict[str, Any] = {}
+    metric_aliases = {
+        "population": ("demography", ["population", "populasi", "penduduk"]),
+        "u_rate": ("labour", ["unemployment rate", "kadar pengangguran"]),
+        "lf_unemployed": ("labour", ["unemployed people", "unemployed persons", "penganggur"]),
+        "p_rate": ("labour", ["participation rate", "kadar penyertaan"]),
+        "lf": ("labour", ["labour force", "tenaga buruh"]),
+        "inflation_yoy": ("prices", ["inflation", "inflasi"]),
+    }
+    if not intent.metric:
+        for metric, (domain, aliases) in metric_aliases.items():
+            if any(alias in text for alias in aliases):
+                updates.update({"metric": metric, "domain": domain})
+                break
+    elif intent.domain and "/" in intent.domain:
+        updates["domain"] = intent.domain.split("/", 1)[0]
+
+    years = re.findall(r"\b(?:19|20)\d{2}\b", text)
+    if years:
+        updates["start_period"] = intent.start_period or years[0]
+        updates["end_period"] = intent.end_period or years[-1]
+    if any(term in text for term in ["latest", "current", "terkini", "semasa"]):
+        updates["latest"] = True
+    if intent.entities and not intent.geography_level:
+        updates["geography_level"] = "state"
+    elif not intent.geography_level and "malaysia" in text:
+        updates["geography_level"] = "national"
+
+    repaired = intent.model_copy(update=updates)
+    has_period = bool(repaired.start_period or repaired.end_period or repaired.latest)
+    if repaired.metric and repaired.geography_level and has_period:
+        repaired = repaired.model_copy(update={"ambiguous": False, "clarification": None})
+    return repaired
 
 
 def search_catalogue(state: AgentState, services: NodeServices) -> dict:
@@ -135,30 +175,51 @@ def generate_visualization(state: AgentState, services: NodeServices) -> dict:
     return {"visualization": spec}
 
 
-def _format_value(value: float | int | str | None, unit: str) -> str:
+def _format_value(value: float | int | str | None, unit: str, language: str = "en") -> str:
     if isinstance(value, float):
         rendered = f"{value:,.2f}".rstrip("0").rstrip(".")
     else:
         rendered = str(value)
-    return f"{rendered} {unit}".strip()
+    localized_unit = {"percent": "peratus", "thousand people": "ribu orang"}.get(unit, unit) if language == "ms" else unit
+    return f"{rendered} {localized_unit}".strip()
 
 
 def generate_response(state: AgentState, services: NodeServices) -> dict:
     result = state["analysis_result"]
     definition = state["selected_dataset"]
+    language = state["intent"].language.value
+    metric_display = {
+        "population": "populasi", "u_rate": "kadar pengangguran", "lf_unemployed": "bilangan penganggur",
+        "p_rate": "kadar penyertaan", "lf": "tenaga buruh", "inflation_yoy": "kadar inflasi",
+    }.get(result.metric, result.metric) if language == "ms" else result.metric
+    labels_ms = {
+        "start": "nilai awal", "end": "nilai akhir", "difference": "perbezaan",
+        "percentage_growth": "pertumbuhan peratus", "cagr": "CAGR",
+        "mean": "purata", "median": "median", "minimum": "minimum", "maximum": "maksimum",
+        "sum": "jumlah", "count": "bilangan",
+    }
     if result.supporting_values:
         facts = ", ".join(
-            f"{key.replace('_', ' ')}: {_format_value(value, 'percent' if key in {'percentage_growth', 'cagr'} else result.unit)}"
+            f"{labels_ms.get(key, key.replace('_', ' ')) if language == 'ms' else key.replace('_', ' ')}: "
+            f"{_format_value(value, 'percent' if key in {'percentage_growth', 'cagr'} else result.unit, language)}"
             for key, value in result.supporting_values.items()
         )
-        answer_text = f"Based on the selected DOSM data, {facts}."
+        answer_text = f"Berdasarkan data DOSM yang dipilih, {facts}." if language == "ms" else f"Based on the selected DOSM data, {facts}."
     elif result.rows:
         first = result.rows[0]
-        answer_text = f"The requested {result.metric} is {_format_value(first.get(result.metric), result.unit)}."
+        answer_text = (
+            f"Nilai {metric_display} yang diminta ialah {_format_value(first.get(result.metric), result.unit, language)}."
+            if language == "ms"
+            else f"The requested {result.metric} is {_format_value(first.get(result.metric), result.unit)}."
+        )
         if result.row_count > 1:
-            answer_text = f"I found {result.row_count} matching observations for {result.metric}. See the table or chart below."
+            answer_text = (
+                f"Saya menemui {result.row_count} pemerhatian yang sepadan untuk {metric_display}. Lihat jadual atau carta di bawah."
+                if language == "ms"
+                else f"I found {result.row_count} matching observations for {result.metric}. See the table or chart below."
+            )
     else:
-        answer_text = "No matching observations were found."
+        answer_text = "Tiada pemerhatian yang sepadan ditemui." if language == "ms" else "No matching observations were found."
     periods = [str(row.get("date")) for row in result.rows if row.get("date")]
     period = f"{min(periods)} to {max(periods)}" if periods else None
     source = SourceReference(

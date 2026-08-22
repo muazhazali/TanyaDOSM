@@ -71,7 +71,8 @@ class Catalogue:
 
         datasets = self.all()
         texts = [dataset.searchable_text for dataset in datasets]
-        digest = hashlib.sha256("\n".join(texts).encode()).hexdigest()[:16]
+        embedder_identity = f"{type(embedder).__module__}.{type(embedder).__qualname__}:{getattr(embedder, 'model', '')}"
+        digest = hashlib.sha256(f"{embedder_identity}\n{'\n'.join(texts)}".encode()).hexdigest()[:16]
         cache_dir.mkdir(parents=True, exist_ok=True)
         cache_file = cache_dir / f"catalogue-embeddings-{digest}.json"
         if cache_file.exists():

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langgraph.graph import END, START, StateGraph
 
 from askdosm.agent import nodes
@@ -63,18 +63,16 @@ class AskDOSMService:
     def __init__(self, settings: Settings | None = None, *, llm=None, embedder=None, cache=None):
         self.settings = settings or get_settings()
         if llm is None:
-            if not self.settings.openai_api_key:
-                raise RuntimeError("OPENAI_API_KEY is required to answer questions.")
-            llm = ChatOpenAI(
+            llm = ChatOllama(
                 model=self.settings.chat_model,
-                api_key=self.settings.openai_api_key,
-                timeout=self.settings.request_timeout,
+                base_url=self.settings.ollama_base_url,
+                temperature=0,
+                validate_model_on_init=True,
             )
-        if embedder is None and self.settings.openai_api_key:
-            embedder = OpenAIEmbeddings(
+        if embedder is None:
+            embedder = OllamaEmbeddings(
                 model=self.settings.embedding_model,
-                api_key=self.settings.openai_api_key,
-                request_timeout=self.settings.request_timeout,
+                base_url=self.settings.ollama_base_url,
             )
         services = NodeServices(
             catalogue=Catalogue(self.settings.catalogue_path),
