@@ -18,6 +18,15 @@ class Settings(BaseSettings):
     cache_ttl_hours: int = 24
     max_retries: int = 2
     catalogue_path: Path = Path("data/catalogue.json")
+    run_db_path: Path = Path(".askdosm-cache/runs.sqlite3")
+    run_retention_days: int = 7
+    max_concurrent_runs: int = 1
+    max_question_length: int = 500
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
 
 def get_settings() -> Settings:

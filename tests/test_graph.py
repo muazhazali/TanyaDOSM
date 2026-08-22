@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 
 import pandas as pd
 
@@ -53,10 +54,14 @@ def test_graph_returns_validated_answer(tmp_path):
         catalogue=Catalogue(Path("data/catalogue.json")), cache=FakeCache(frame), llm=FakeLLM(intent, plan),
         embedder=None, embedding_cache_dir=tmp_path, max_retries=2
     )
-    state = build_graph(services).invoke({"question": "What was Selangor's population in 2025?", "retry_count": 0, "errors": []})
+    events = []
+    state = build_graph(services).invoke({"question": "What was Selangor's population in 2025?", "retry_count": 0, "errors": [], "event_sink": events.append})
     assert state["answer"].error is None
     assert "7,100 thousand people" in state["answer"].answer
     assert state["answer"].source.dataset_id == "population_state"
+    assert any(event["type"] == "query_plan" for event in events)
+    assert any(event["type"] == "data_summary" for event in events)
+    json.dumps(events, allow_nan=False)
 
 
 def test_graph_rejects_multi_dataset_question(tmp_path):
@@ -69,4 +74,3 @@ def test_graph_rejects_multi_dataset_question(tmp_path):
     state = build_graph(services).invoke({"question": "Compare population and unemployment", "retry_count": 0, "errors": []})
     assert state["answer"].error
     assert "one dataset" in state["answer"].answer
-

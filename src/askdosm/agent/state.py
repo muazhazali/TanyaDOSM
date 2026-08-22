@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any, TypedDict
 
 import pandas as pd
@@ -36,3 +37,4 @@ class AgentState(TypedDict, total=False):
     cache_freshness: str | None
     final_status: str
     metadata: dict[str, Any]
+    event_sink: Callable[[dict[str, Any]], None]

@@ -1,0 +1,145 @@
+"""FastAPI application and SSE transport."""
+
+from __future__ import annotations
+
+import asyncio
+import json
+from contextlib import asynccontextmanager
+from pathlib import Path
+from urllib.request import urlopen
+
+from fastapi import FastAPI, Header, HTTPException, Query, Request, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
+
+from askdosm.agent import AskDOSMService
+from askdosm.api.manager import RunManager
+from askdosm.api.models import HealthStatus, RunCreateRequest, RunSnapshot, RunSummary, TERMINAL_STATUSES
+from askdosm.api.store import RunStore
+from askdosm.catalogue import Catalogue
+from askdosm.config import Settings, get_settings
+
+
+def create_app(settings: Settings | None = None, service_factory=None) -> FastAPI:
+    config = settings or get_settings()
+    store = RunStore(config.run_db_path)
+    factory = service_factory or (lambda: AskDOSMService(config))
+    manager = RunManager(store, factory, config.run_retention_days)
+
+    @asynccontextmanager
+    async def lifespan(application: FastAPI):
+        application.state.store = store
+        application.state.manager = manager
+        await manager.start()
+        yield
+        await manager.stop()
+
+    app = FastAPI(title="AskDOSM API", version="0.2.0", lifespan=lifespan)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=config.cors_origin_list,
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "DELETE"],
+        allow_headers=["Content-Type", "Last-Event-ID"],
+    )
+
+    @app.get("/api/health", response_model=HealthStatus)
+    async def health() -> HealthStatus:
+        try:
+            Catalogue(config.catalogue_path)
+            catalogue_status = "ready"
+        except Exception:
+            catalogue_status = "unavailable"
+
+        def check_ollama() -> str:
+            try:
+                with urlopen(f"{config.ollama_base_url.rstrip('/')}/api/tags", timeout=2):
+                    return "ready"
+            except Exception:
+                return "unavailable"
+
+        ollama_status = await asyncio.to_thread(check_ollama)
+        overall = "ready" if catalogue_status == ollama_status == "ready" else "degraded"
+        return HealthStatus(status=overall, database="ready", catalogue=catalogue_status, ollama=ollama_status)
+
+    @app.get("/api/datasets")
+    async def datasets():
+        return [
+            item.model_dump(mode="json", exclude={"parquet_url", "expected_schema", "default_filters"})
+            for item in Catalogue(config.catalogue_path).all()
+        ]
+
+    @app.post("/api/runs", response_model=RunSnapshot, status_code=status.HTTP_202_ACCEPTED)
+    async def create_run(body: RunCreateRequest) -> RunSnapshot:
+        if len(body.question) > config.max_question_length:
+            raise HTTPException(status_code=422, detail="Question is too long")
+        return await manager.create(body.question)
+
+    @app.get("/api/runs", response_model=list[RunSummary])
+    async def list_runs(limit: int = Query(default=20, ge=1, le=100)) -> list[RunSummary]:
+        return await store.list_runs(limit)
+
+    @app.get("/api/runs/{run_id}", response_model=RunSnapshot)
+    async def get_run(run_id: str) -> RunSnapshot:
+        snapshot = await store.get_run(run_id)
+        if snapshot is None:
+            raise HTTPException(status_code=404, detail="Run not found")
+        return snapshot
+
+    @app.get("/api/runs/{run_id}/events")
+    async def stream_events(
+        run_id: str,
+        request: Request,
+        after: int = Query(default=0, ge=0),
+        last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
+    ) -> StreamingResponse:
+        if await store.get_run(run_id) is None:
+            raise HTTPException(status_code=404, detail="Run not found")
+        try:
+            cursor = max(after, int(last_event_id or 0))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Last-Event-ID must be an integer") from None
+
+        async def generate():
+            nonlocal cursor
+            idle_ticks = 0
+            while not await request.is_disconnected():
+                events = await store.get_events(run_id, cursor)
+                for event in events:
+                    cursor = event.sequence
+                    yield f"id: {event.sequence}\nevent: {event.type}\ndata: {event.model_dump_json()}\n\n"
+                snapshot = await store.get_run(run_id)
+                if snapshot and snapshot.status in TERMINAL_STATUSES and not events:
+                    break
+                idle_ticks += 1
+                if idle_ticks % 30 == 0:
+                    yield ": heartbeat\n\n"
+                await asyncio.sleep(0.5)
+
+        return StreamingResponse(
+            generate(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+        )
+
+    @app.delete("/api/runs/{run_id}", status_code=status.HTTP_204_NO_CONTENT)
+    async def delete_run(run_id: str):
+        try:
+            deleted = await store.delete_run(run_id)
+        except RuntimeError:
+            raise HTTPException(status_code=409, detail="Active runs cannot be deleted") from None
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Run not found")
+        return None
+
+    dist = Path("frontend/dist")
+    if dist.is_dir():
+        app.mount("/", StaticFiles(directory=dist, html=True), name="frontend")
+    else:
+        @app.get("/", include_in_schema=False)
+        async def root():
+            return JSONResponse({"name": "AskDOSM API", "frontend": "Run pnpm build in frontend/"})
+
+    return app
+
+
+app = create_app()

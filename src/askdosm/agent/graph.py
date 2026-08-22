@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
+from time import perf_counter
+from typing import Any
 
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langgraph.graph import END, START, StateGraph
@@ -16,19 +19,113 @@ from askdosm.data import DatasetCache
 from askdosm.models import AnswerPayload
 
 
+def _artifact_event(node_name: str, update: dict[str, Any]) -> dict[str, Any] | None:
+    """Return the safe, JSON-ready part of a node update for UI inspection."""
+    mapping = {
+        "parse_question": ("intent", "intent"),
+        "search_catalogue": ("candidates", "candidates"),
+        "build_query_plan": ("query_plan", "query_plan"),
+        "analyze_result": ("analysis", "analysis_result"),
+        "validate_result": ("validation", "validation"),
+        "generate_visualization": ("visualization", "visualization"),
+        "generate_response": ("result", "answer"),
+        "graceful_failure": ("result", "answer"),
+    }
+    if node_name == "select_dataset":
+        selected = update.get("selected_dataset")
+        return {
+            "type": "selection",
+            "payload": {
+                "dataset_id": selected.dataset_id if selected else None,
+                "title": selected.title if selected else None,
+                "reason": update.get("selection_reason"),
+                "status": update.get("final_status"),
+                "errors": update.get("errors", []),
+            },
+        }
+    if node_name == "inspect_schema":
+        metadata = update.get("metadata", {})
+        return {
+            "type": "schema",
+            "payload": {
+                "columns": metadata.get("columns", []),
+                "dimensions": metadata.get("dimensions", []),
+                "measures": metadata.get("measures", []),
+                "default_filters": metadata.get("default_filters", {}),
+                "frequency": metadata.get("frequency"),
+                "cache_freshness": update.get("cache_freshness"),
+            },
+        }
+    if node_name == "execute_query":
+        frame = update.get("query_frame")
+        return {"type": "data_summary", "payload": {"rows": len(frame) if frame is not None else 0}}
+    item = mapping.get(node_name)
+    if not item or item[1] not in update:
+        return None
+    event_type, key = item
+    value = update[key]
+    if hasattr(value, "model_dump"):
+        payload = value.model_dump(mode="json")
+    elif isinstance(value, list):
+        payload = [item.model_dump(mode="json") if hasattr(item, "model_dump") else item for item in value]
+    else:
+        payload = value
+    return {"type": event_type, "payload": payload}
+
+
+def _observed_node(
+    name: str,
+    function: Callable[[AgentState, NodeServices], dict[str, Any]],
+    services: NodeServices,
+):
+    def run(state: AgentState) -> dict[str, Any]:
+        sink = state.get("event_sink")
+        if sink:
+            sink({"type": "node.started", "node": name, "payload": {}})
+        started = perf_counter()
+        try:
+            update = function(state, services)
+        except Exception as exc:
+            if sink:
+                sink({
+                    "type": "node.failed",
+                    "node": name,
+                    "duration_ms": round((perf_counter() - started) * 1000, 2),
+                    "payload": {"error": type(exc).__name__},
+                })
+            raise
+        duration_ms = round((perf_counter() - started) * 1000, 2)
+        if sink:
+            sink({"type": "node.completed", "node": name, "duration_ms": duration_ms, "payload": {}})
+            artifact = _artifact_event(name, update)
+            if artifact:
+                sink({**artifact, "node": name})
+            previous_retry = state.get("retry_count", 0)
+            current_retry = update.get("retry_count", previous_retry)
+            if current_retry > previous_retry:
+                sink({
+                    "type": "retry",
+                    "node": name,
+                    "payload": {"attempt": current_retry, "errors": update.get("errors", [])},
+                })
+        return update
+
+    return run
+
+
 def build_graph(services: NodeServices):
     graph = StateGraph(AgentState)
-    graph.add_node("parse_question", lambda state: nodes.parse_question(state, services))
-    graph.add_node("search_catalogue", lambda state: nodes.search_catalogue(state, services))
-    graph.add_node("select_dataset", lambda state: nodes.select_dataset(state, services))
-    graph.add_node("inspect_schema", lambda state: nodes.inspect_schema(state, services))
-    graph.add_node("build_query_plan", lambda state: nodes.build_query_plan(state, services))
-    graph.add_node("execute_query", lambda state: nodes.execute_query(state, services))
-    graph.add_node("analyze_result", lambda state: nodes.analyze_result(state, services))
-    graph.add_node("validate_result", lambda state: nodes.validate_result_node(state, services))
-    graph.add_node("generate_visualization", lambda state: nodes.generate_visualization(state, services))
-    graph.add_node("generate_response", lambda state: nodes.generate_response(state, services))
-    graph.add_node("graceful_failure", lambda state: nodes.graceful_failure(state, services))
+    graph.add_node("parse_question", _observed_node("parse_question", nodes.parse_question, services))
+    graph.add_node("search_catalogue", _observed_node("search_catalogue", nodes.search_catalogue, services))
+    graph.add_node("select_dataset", _observed_node("select_dataset", nodes.select_dataset, services))
+    graph.add_node("inspect_schema", _observed_node("inspect_schema", nodes.inspect_schema, services))
+    graph.add_node("build_query_plan", _observed_node("build_query_plan", nodes.build_query_plan, services))
+    graph.add_node("execute_query", _observed_node("execute_query", nodes.execute_query, services))
+    graph.add_node("analyze_result", _observed_node("analyze_result", nodes.analyze_result, services))
+    graph.add_node("validate_result", _observed_node("validate_result", nodes.validate_result_node, services))
+    graph.add_node("generate_visualization", _observed_node("generate_visualization", nodes.generate_visualization, services))
+    graph.add_node("generate_response", _observed_node("generate_response", nodes.generate_response, services))
+    graph.add_node("graceful_failure", _observed_node("graceful_failure", nodes.graceful_failure, services))
 
     graph.add_edge(START, "parse_question")
     graph.add_edge("parse_question", "search_catalogue")
@@ -84,8 +181,11 @@ class AskDOSMService:
         )
         self.graph = build_graph(services)
 
-    def ask(self, question: str) -> AnswerPayload:
+    def ask(self, question: str, *, event_sink: Callable[[dict[str, Any]], None] | None = None) -> AnswerPayload:
         if not question.strip():
             raise ValueError("Question cannot be empty")
-        state = self.graph.invoke({"question": question.strip(), "retry_count": 0, "errors": []})
+        initial_state: AgentState = {"question": question.strip(), "retry_count": 0, "errors": []}
+        if event_sink is not None:
+            initial_state["event_sink"] = event_sink
+        state = self.graph.invoke(initial_state)
         return state["answer"]
