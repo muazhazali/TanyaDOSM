@@ -10,6 +10,7 @@ from uuid import uuid4
 from askdosm.agent import TanyaDOSMService
 from askdosm.api.models import RunSnapshot, RunStatus
 from askdosm.api.store import RunStore
+from askdosm.providers import HostedProviderError
 
 
 class RunManager:
@@ -79,6 +80,12 @@ class RunManager:
             await self.store.update_status(run_id, RunStatus.COMPLETED, answer=answer)
             await self.store.append_event(
                 run_id, {"type": "run.completed", "payload": {"has_error": answer.error is not None}}
+            )
+        except HostedProviderError as exc:
+            message = str(exc)
+            await self.store.update_status(run_id, RunStatus.FAILED, error=message)
+            await self.store.append_event(
+                run_id, {"type": "run.failed", "payload": {"error": message}}
             )
         except Exception as exc:
             message = f"TanyaDOSM could not complete this run ({type(exc).__name__})."

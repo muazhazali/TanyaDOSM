@@ -10,10 +10,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_prefix="ASKDOSM_", extra="ignore")
 
-    chat_model: str = "qwen3:8b"
-    embedding_model: str = "embeddinggemma"
-    ollama_base_url: str = "http://localhost:11434"
+    chat_model: str = "openai/gpt-oss-20b"
+    groq_api_key: str = ""
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+    embedding_model: str = "@cf/baai/bge-m3"
+    cloudflare_account_id: str = ""
+    cloudflare_api_token: str = ""
+    cloudflare_base_url: str = "https://api.cloudflare.com/client/v4/accounts"
     request_timeout: float = 30.0
+    provider_max_retries: int = 2
     cache_dir: Path = Path(".askdosm-cache")
     cache_ttl_hours: int = 720
     monitor_interval_hours: int = 168
@@ -28,6 +33,10 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    def require_groq_credentials(self) -> None:
+        if not self.groq_api_key.strip():
+            raise RuntimeError("ASKDOSM_GROQ_API_KEY is required")
 
 
 def get_settings() -> Settings:

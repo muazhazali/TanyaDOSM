@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Any, Literal, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
@@ -100,12 +100,15 @@ class DatasetCandidate(BaseModel):
     reason: str
 
 
+JsonScalar: TypeAlias = str | int | float | bool | None
+
+
 class FilterSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     column: str
     operator: Literal["eq", "in", "gte", "lte", "between"]
-    value: Any
+    value: JsonScalar | list[JsonScalar]
 
 
 class QueryPlan(BaseModel):

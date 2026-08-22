@@ -7,7 +7,6 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any
 
-from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langgraph.graph import END, START, StateGraph
 
 from askdosm.agent import nodes
@@ -17,6 +16,7 @@ from askdosm.catalogue import Catalogue
 from askdosm.config import Settings, get_settings
 from askdosm.data import DatasetCache
 from askdosm.models import AnswerPayload
+from askdosm.providers import create_chat_model, create_embedder
 
 
 def _artifact_event(node_name: str, update: dict[str, Any]) -> dict[str, Any] | None:
@@ -162,17 +162,9 @@ class TanyaDOSMService:
     def __init__(self, settings: Settings | None = None, *, llm=None, embedder=None, cache=None):
         self.settings = settings or get_settings()
         if llm is None:
-            llm = ChatOllama(
-                model=self.settings.chat_model,
-                base_url=self.settings.ollama_base_url,
-                temperature=0,
-                validate_model_on_init=True,
-            )
+            llm = create_chat_model(self.settings)
         if embedder is None:
-            embedder = OllamaEmbeddings(
-                model=self.settings.embedding_model,
-                base_url=self.settings.ollama_base_url,
-            )
+            embedder = create_embedder(self.settings)
         services = NodeServices(
             catalogue=Catalogue(self.settings.catalogue_path),
             cache=cache or DatasetCache(self.settings.cache_dir / "datasets", self.settings.cache_ttl_hours),

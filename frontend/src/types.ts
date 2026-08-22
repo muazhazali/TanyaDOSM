@@ -54,7 +54,8 @@ export interface HealthStatus {
   status: string
   database: string
   catalogue: string
-  ollama: string
+  llm: string
+  embeddings: string
 }
 
 export interface DatasetDefinition {

@@ -8,7 +8,7 @@ const snapshot = {
 }
 
 test('reopens a completed persisted run', async ({ page }) => {
-  await page.route('**/api/health', (route) => route.fulfill({ json: { status: 'ready', database: 'ready', catalogue: 'ready', ollama: 'ready' } }))
+  await page.route('**/api/health', (route) => route.fulfill({ json: { status: 'ready', database: 'ready', catalogue: 'ready', llm: 'ready', embeddings: 'ready' } }))
   await page.route('**/api/runs?limit=50', (route) => route.fulfill({ json: [snapshot] }))
   await page.route('**/api/runs/demo', (route) => route.fulfill({ json: snapshot }))
   await page.route('**/api/runs/demo/events', (route) => route.fulfill({ contentType: 'text/event-stream', body: '' }))

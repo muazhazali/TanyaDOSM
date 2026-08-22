@@ -7,7 +7,7 @@ import json
 import logging
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
-from urllib.request import urlopen
+from time import monotonic
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,6 +22,7 @@ from askdosm.catalogue import Catalogue
 from askdosm.config import Settings, get_settings
 from askdosm.data import DatasetCache
 from askdosm.monitor import CatalogueMonitor, MonitorState
+from askdosm.providers import check_cloudflare, check_groq
 
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 def create_app(settings: Settings | None = None, service_factory=None) -> FastAPI:
     config = settings or get_settings()
+    uses_default_service = service_factory is None
     store = RunStore(config.run_db_path)
     factory = service_factory or (lambda: TanyaDOSMService(config))
     manager = RunManager(store, factory, config.run_retention_days)
@@ -38,6 +40,8 @@ def create_app(settings: Settings | None = None, service_factory=None) -> FastAP
         config.cache_dir / "catalogue-monitor.json",
     )
     monitor_lock = asyncio.Lock()
+    health_cache: dict[str, object] = {"checked_at": 0.0, "llm": "unavailable", "embeddings": "unavailable"}
+    health_lock = asyncio.Lock()
 
     async def check_catalogue() -> MonitorState:
         async with monitor_lock:
@@ -53,6 +57,8 @@ def create_app(settings: Settings | None = None, service_factory=None) -> FastAP
 
     @asynccontextmanager
     async def lifespan(application: FastAPI):
+        if uses_default_service:
+            config.require_groq_credentials()
         application.state.store = store
         application.state.manager = manager
         application.state.monitor = monitor
@@ -81,16 +87,28 @@ def create_app(settings: Settings | None = None, service_factory=None) -> FastAP
         except Exception:
             catalogue_status = "unavailable"
 
-        def check_ollama() -> str:
-            try:
-                with urlopen(f"{config.ollama_base_url.rstrip('/')}/api/tags", timeout=2):
-                    return "ready"
-            except Exception:
-                return "unavailable"
-
-        ollama_status = await asyncio.to_thread(check_ollama)
-        overall = "ready" if catalogue_status == ollama_status == "ready" else "degraded"
-        return HealthStatus(status=overall, database="ready", catalogue=catalogue_status, ollama=ollama_status)
+        async with health_lock:
+            now = monotonic()
+            if now - float(health_cache["checked_at"]) >= 30:
+                llm_status, embedding_status = await asyncio.gather(
+                    asyncio.to_thread(check_groq, config),
+                    asyncio.to_thread(check_cloudflare, config),
+                )
+                health_cache.update(
+                    checked_at=now,
+                    llm=llm_status,
+                    embeddings=embedding_status,
+                )
+        llm_status = str(health_cache["llm"])
+        embedding_status = str(health_cache["embeddings"])
+        overall = "ready" if catalogue_status == llm_status == embedding_status == "ready" else "degraded"
+        return HealthStatus(
+            status=overall,
+            database="ready",
+            catalogue=catalogue_status,
+            llm=llm_status,
+            embeddings=embedding_status,
+        )
 
     @app.get("/api/datasets")
     async def datasets():

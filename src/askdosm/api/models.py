@@ -61,5 +61,5 @@ class HealthStatus(BaseModel):
     status: str
     database: str
     catalogue: str
-    ollama: str
-
+    llm: str
+    embeddings: str

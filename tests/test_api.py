@@ -10,6 +10,7 @@ from askdosm.api.models import RunStatus
 from askdosm.api.store import RunStore
 from askdosm.config import Settings
 from askdosm.models import AnswerPayload
+from askdosm.providers import HostedProviderError
 
 
 class FakeService:
@@ -55,6 +56,49 @@ def test_api_validates_question(tmp_path):
     with TestClient(app) as client:
         assert client.post("/api/runs", json={"question": ""}).status_code == 422
         assert client.get("/api/runs/missing").status_code == 404
+
+
+def test_health_reports_hosted_providers(tmp_path, monkeypatch):
+    monkeypatch.setattr("askdosm.api.app.check_groq", lambda settings: "ready")
+    monkeypatch.setattr("askdosm.api.app.check_cloudflare", lambda settings: "unavailable")
+    app = create_app(api_settings(tmp_path), service_factory=FakeService)
+
+    with TestClient(app) as client:
+        response = client.get("/api/health")
+
+    assert response.json() == {
+        "status": "degraded",
+        "database": "ready",
+        "catalogue": "ready",
+        "llm": "ready",
+        "embeddings": "unavailable",
+    }
+
+
+def test_default_app_rejects_missing_groq_key_at_startup(tmp_path):
+    settings = api_settings(tmp_path).model_copy(update={"groq_api_key": ""})
+    app = create_app(settings)
+
+    with pytest.raises(RuntimeError, match="ASKDOSM_GROQ_API_KEY"):
+        with TestClient(app):
+            pass
+
+
+def test_safe_provider_error_is_returned_to_run(tmp_path):
+    class FailingService:
+        def ask(self, question, *, event_sink=None):
+            raise HostedProviderError("Hosted language model free-tier quota is temporarily unavailable.")
+
+    app = create_app(api_settings(tmp_path), service_factory=FailingService)
+    with TestClient(app) as client:
+        created = client.post("/api/runs", json={"question": "Latest population?"}).json()
+        for _ in range(100):
+            snapshot = client.get(f"/api/runs/{created['id']}").json()
+            if snapshot["status"] == "failed":
+                break
+            asyncio.run(asyncio.sleep(0.01))
+
+    assert snapshot["error"] == "Hosted language model free-tier quota is temporarily unavailable."
 
 
 @pytest.mark.asyncio
