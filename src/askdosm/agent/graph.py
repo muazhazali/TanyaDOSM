@@ -67,7 +67,9 @@ def _artifact_event(node_name: str, update: dict[str, Any]) -> dict[str, Any] | 
     if hasattr(value, "model_dump"):
         payload = value.model_dump(mode="json")
     elif isinstance(value, list):
-        payload = [item.model_dump(mode="json") if hasattr(item, "model_dump") else item for item in value]
+        payload = {
+            "items": [item.model_dump(mode="json") if hasattr(item, "model_dump") else item for item in value]
+        }
     else:
         payload = value
     return {"type": event_type, "payload": payload}

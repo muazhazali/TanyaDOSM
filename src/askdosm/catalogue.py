@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 from pathlib import Path
 from typing import Protocol
@@ -12,6 +13,9 @@ import numpy as np
 from pydantic import TypeAdapter
 
 from askdosm.models import DatasetCandidate, DatasetDefinition, QuestionIntent
+
+
+logger = logging.getLogger(__name__)
 
 
 class Embedder(Protocol):
@@ -69,24 +73,30 @@ class Catalogue:
         if embedder is None:
             return sorted(lexical.values(), key=lambda candidate: candidate.score, reverse=True)
 
-        datasets = self.all()
-        texts = [dataset.searchable_text for dataset in datasets]
-        embedder_identity = f"{type(embedder).__module__}.{type(embedder).__qualname__}:{getattr(embedder, 'model', '')}"
-        digest = hashlib.sha256(f"{embedder_identity}\n{'\n'.join(texts)}".encode()).hexdigest()[:16]
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        cache_file = cache_dir / f"catalogue-embeddings-{digest}.json"
-        if cache_file.exists():
-            vectors = json.loads(cache_file.read_text(encoding="utf-8"))
-        else:
-            vectors = embedder.embed_documents(texts)
-            cache_file.write_text(json.dumps(vectors), encoding="utf-8")
-        query_vector = np.asarray(embedder.embed_query(query), dtype=float)
-        query_norm = np.linalg.norm(query_vector)
-        for dataset, vector in zip(datasets, vectors, strict=True):
-            candidate_vector = np.asarray(vector, dtype=float)
-            denominator = query_norm * np.linalg.norm(candidate_vector)
-            similarity = float(np.dot(query_vector, candidate_vector) / denominator) if denominator else 0.0
-            existing = lexical[dataset.dataset_id]
-            existing.score = min(1.0, existing.score * 0.65 + max(similarity, 0.0) * 0.35)
-            existing.reason += f"; semantic similarity {similarity:.2f}"
+        try:
+            datasets = self.all()
+            texts = [dataset.searchable_text for dataset in datasets]
+            embedder_identity = f"{type(embedder).__module__}.{type(embedder).__qualname__}:{getattr(embedder, 'model', '')}"
+            digest = hashlib.sha256(f"{embedder_identity}\n{'\n'.join(texts)}".encode()).hexdigest()[:16]
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            cache_file = cache_dir / f"catalogue-embeddings-{digest}.json"
+            if cache_file.exists():
+                vectors = json.loads(cache_file.read_text(encoding="utf-8"))
+            else:
+                vectors = embedder.embed_documents(texts)
+                cache_file.write_text(json.dumps(vectors), encoding="utf-8")
+            query_vector = np.asarray(embedder.embed_query(query), dtype=float)
+            query_norm = np.linalg.norm(query_vector)
+            for dataset, vector in zip(datasets, vectors, strict=True):
+                candidate_vector = np.asarray(vector, dtype=float)
+                denominator = query_norm * np.linalg.norm(candidate_vector)
+                similarity = float(np.dot(query_vector, candidate_vector) / denominator) if denominator else 0.0
+                existing = lexical[dataset.dataset_id]
+                existing.score = min(1.0, existing.score * 0.65 + max(similarity, 0.0) * 0.35)
+                existing.reason += f"; semantic similarity {similarity:.2f}"
+        except Exception as exc:
+            # Embeddings improve ranking but are not required for catalogue lookup.
+            # In particular, provider response validation errors should not abort a run
+            # when the deterministic metadata search can still select a dataset.
+            logger.warning("Semantic catalogue search failed; using lexical ranking: %s", exc)
         return sorted(lexical.values(), key=lambda candidate: candidate.score, reverse=True)

@@ -17,6 +17,15 @@ def utcnow() -> datetime:
     return datetime.now(UTC)
 
 
+def _event_payload(value: Any) -> dict[str, Any]:
+    """Keep the public event contract stable, including for legacy rows."""
+    if value is None:
+        return {}
+    if isinstance(value, dict):
+        return value
+    return {"items": value}
+
+
 class RunStore:
     def __init__(self, path: Path):
         self.path = path
@@ -105,7 +114,7 @@ class RunStore:
 
     async def append_event(self, run_id: str, event: dict[str, Any]) -> RunEvent:
         timestamp = utcnow()
-        payload = event.get("payload") or {}
+        payload = _event_payload(event.get("payload"))
         # Round-trip through JSON here so non-serializable state can never reach storage.
         payload_json = json.dumps(payload, ensure_ascii=False, allow_nan=False)
         async with aiosqlite.connect(self.path) as db:
@@ -157,7 +166,7 @@ class RunStore:
                 type=row["type"],
                 node=row["node"],
                 duration_ms=row["duration_ms"],
-                payload=json.loads(row["payload_json"]),
+                payload=_event_payload(json.loads(row["payload_json"])),
                 timestamp=datetime.fromisoformat(row["timestamp"]),
             )
             for row in rows

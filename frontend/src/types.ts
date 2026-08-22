@@ -56,3 +56,18 @@ export interface HealthStatus {
   catalogue: string
   ollama: string
 }
+
+export interface DatasetDefinition {
+  dataset_id: string
+  title: string
+  description: string
+  domain: string
+  aliases: string[]
+  dimensions: string[]
+  measures: Array<{ name: string; aliases: string[]; unit: string }>
+  frequency: 'monthly' | 'quarterly' | 'annual'
+  geography_level: 'national' | 'state' | 'district'
+  source_agency: string
+  source_url: string
+  caveats: string[]
+}

@@ -17,6 +17,7 @@ from askdosm.data import DatasetCache, execute_plan, resolve_latest
 from askdosm.models import (
     AnswerPayload,
     ExecutionTrace,
+    Operation,
     OutputKind,
     QueryPlan,
     QuestionIntent,
@@ -140,6 +141,20 @@ def build_query_plan(state: AgentState, services: NodeServices) -> dict:
     plan = planner.invoke([("system", PLAN_SYSTEM), ("human", json.dumps(context))])
     if plan.dataset_id != definition.dataset_id:
         raise ValueError("Planner returned an unregistered or different dataset ID")
+    if state["intent"].latest:
+        # "latest" is an instruction, not a date value. Resolve it after all
+        # ordinary filters have run so planner output such as date = "latest"
+        # never reaches pandas' timestamp parser.
+        filters = [
+            item
+            for item in plan.filters
+            if not (
+                item.column == "date"
+                and isinstance(item.value, str)
+                and item.value.casefold() in {"latest", "current", "most recent"}
+            )
+        ]
+        plan = plan.model_copy(update={"filters": filters})
     return {"query_plan": plan}
 
 
@@ -198,7 +213,39 @@ def generate_response(state: AgentState, services: NodeServices) -> dict:
         "mean": "purata", "median": "median", "minimum": "minimum", "maximum": "maksimum",
         "sum": "jumlah", "count": "bilangan",
     }
-    if result.supporting_values:
+    operation = state["query_plan"].operation
+    extreme_key = "minimum" if operation == Operation.MIN else "maximum" if operation == Operation.MAX else None
+    extreme_value = result.supporting_values.get(extreme_key) if extreme_key else None
+    extreme_row = None
+    if extreme_value is not None:
+        extreme_row = next(
+            (
+                row for row in result.rows
+                if row.get(result.metric) is not None
+                and float(row[result.metric]) == float(extreme_value)
+            ),
+            None,
+        )
+    entity_columns = [
+        column for column in definition.dimensions
+        if column != "date" and column not in definition.default_filters
+    ]
+    entity_column = next(
+        (column for column in entity_columns if extreme_row and extreme_row.get(column) is not None),
+        None,
+    )
+    if extreme_row and entity_column:
+        entity = str(extreme_row[entity_column])
+        rendered_value = _format_value(extreme_value, result.unit, language)
+        if language == "ms":
+            direction = "paling sedikit" if operation == Operation.MIN else "paling banyak"
+            subject = "Negeri atau wilayah" if entity_column == "state" else entity_column.replace("_", " ").capitalize()
+            answer_text = f"{subject} dengan {metric_display} {direction} ialah {entity}, dengan {rendered_value}."
+        else:
+            direction = "lowest" if operation == Operation.MIN else "highest"
+            subject = "state or federal territory" if entity_column == "state" else entity_column.replace("_", " ")
+            answer_text = f"The {subject} with the {direction} {result.metric} is {entity}, at {rendered_value}."
+    elif result.supporting_values:
         facts = ", ".join(
             f"{labels_ms.get(key, key.replace('_', ' ')) if language == 'ms' else key.replace('_', ' ')}: "
             f"{_format_value(value, 'percent' if key in {'percentage_growth', 'cagr'} else result.unit, language)}"

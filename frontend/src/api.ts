@@ -1,4 +1,4 @@
-import type { HealthStatus, RunEvent, RunSnapshot, RunSummary } from './types'
+import type { DatasetDefinition, HealthStatus, RunEvent, RunSnapshot, RunSummary } from './types'
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init)
@@ -11,6 +11,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   health: () => request<HealthStatus>('/api/health'),
+  datasets: () => request<DatasetDefinition[]>('/api/datasets'),
   listRuns: () => request<RunSummary[]>('/api/runs?limit=50'),
   getRun: (id: string) => request<RunSnapshot>(`/api/runs/${id}`),
   createRun: (question: string) =>

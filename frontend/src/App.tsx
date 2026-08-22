@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useReducer, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Activity, BarChart3, Clock3, Database, Menu, Send, Trash2, X } from 'lucide-react'
+import { Activity, BarChart3, Clock3, Database, ExternalLink, Menu, Send, Trash2, X } from 'lucide-react'
 import { api, subscribeToRun } from './api'
 import { ResultChart } from './Chart'
 import { initialStreamState, latestArtifact, streamReducer } from './runState'
-import type { AnswerPayload, RunEvent, RunSnapshot, RunStatus } from './types'
+import type { AnswerPayload, DatasetDefinition, RunEvent, RunSnapshot, RunStatus } from './types'
 
 const examples = [
   "What is Malaysia's latest population?",
@@ -90,6 +90,48 @@ function Inspector({ events, snapshot }: { events: RunEvent[]; snapshot?: RunSna
   )
 }
 
+function DatasetCatalogue({ datasets, loading }: { datasets?: DatasetDefinition[]; loading: boolean }) {
+  return (
+    <section className="mt-8" aria-labelledby="available-datasets-heading">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <h3 id="available-datasets-heading" className="flex items-center gap-2 text-lg font-bold text-slate-900">
+            <Database size={19} className="text-emerald-700" /> Available datasets
+          </h3>
+          <p className="mt-1 text-sm text-slate-600">Ask questions using the measures and geographic coverage below.</p>
+        </div>
+        {datasets && <span className="shrink-0 rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700">{datasets.length} datasets</span>}
+      </div>
+      {loading && <p className="mt-4 text-sm text-slate-500">Loading dataset catalogue…</p>}
+      {datasets && (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {datasets.map((dataset) => (
+            <article key={dataset.dataset_id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h4 className="font-semibold leading-snug text-slate-900">{dataset.title}</h4>
+                  <p className="mt-1 text-xs capitalize text-slate-500">{dataset.geography_level} · {dataset.frequency}</p>
+                </div>
+                <a href={dataset.source_url} target="_blank" rel="noreferrer" aria-label={`Open source for ${dataset.title}`} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-emerald-700">
+                  <ExternalLink size={16} />
+                </a>
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">{dataset.description}</p>
+              <div className="mt-3 flex flex-wrap gap-1.5" aria-label="Available measures">
+                {dataset.measures.map((measure) => (
+                  <span key={measure.name} className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-800">
+                    {measure.name.replaceAll('_', ' ')} <span className="font-normal text-emerald-600">({measure.unit})</span>
+                  </span>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
 export default function App() {
   const queryClient = useQueryClient()
   const [selectedId, setSelectedId] = useState<string | null>(() => localStorage.getItem('askdosm-active-run'))
@@ -98,6 +140,7 @@ export default function App() {
   const [stream, dispatch] = useReducer(streamReducer, initialStreamState)
   const runs = useQuery({ queryKey: ['runs'], queryFn: api.listRuns, refetchInterval: 5000 })
   const health = useQuery({ queryKey: ['health'], queryFn: api.health, refetchInterval: 30000, retry: false })
+  const datasets = useQuery({ queryKey: ['datasets'], queryFn: api.datasets, staleTime: 5 * 60 * 1000 })
   const selected = useQuery({ queryKey: ['run', selectedId], queryFn: () => api.getRun(selectedId!), enabled: !!selectedId, refetchInterval: selectedId ? 1000 : false })
 
   useEffect(() => {
@@ -158,6 +201,7 @@ export default function App() {
             {create.error && <p className="mt-3 text-sm text-red-700">{create.error.message}</p>}
             {!selectedId && <div className="mt-8"><h3 className="text-sm font-semibold text-slate-600">Try an example</h3><div className="mt-3 grid gap-3 sm:grid-cols-2">{examples.map((example) => <button key={example} onClick={() => setQuestion(example)} className="rounded-xl border border-slate-200 bg-white p-4 text-left text-sm hover:border-emerald-400">{example}</button>)}</div></div>}
             {selectedId && <div className="mt-8 space-y-5"><div className="flex flex-wrap items-center gap-3"><StatusPill status={snapshot?.status || 'queued'} /><p className="font-medium">{snapshot?.question}</p></div>{active && <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5"><p className="font-semibold text-blue-900">{snapshot.status === 'queued' ? 'Waiting for the model…' : `Processing: ${nodeLabels[snapshot.current_node || ''] || snapshot.current_node || 'starting'}`}</p><p className="mt-1 text-sm text-blue-700">Progress is saved and can be recovered after a refresh.</p></div>}{snapshot?.error && <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-800">{snapshot.error}</div>}{snapshot?.answer && <Results answer={snapshot.answer} />}</div>}
+            <DatasetCatalogue datasets={datasets.data} loading={datasets.isLoading} />
           </div>
         </main>
         <Inspector events={stream.events} snapshot={snapshot} />
