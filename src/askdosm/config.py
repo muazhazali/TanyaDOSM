@@ -15,7 +15,8 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     request_timeout: float = 30.0
     cache_dir: Path = Path(".askdosm-cache")
-    cache_ttl_hours: int = 24
+    cache_ttl_hours: int = 720
+    monitor_interval_hours: int = 168
     max_retries: int = 2
     catalogue_path: Path = Path("data/catalogue.json")
     run_db_path: Path = Path(".askdosm-cache/runs.sqlite3")

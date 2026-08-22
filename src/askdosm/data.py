@@ -48,7 +48,7 @@ def validate_schema(frame: pd.DataFrame, definition: DatasetDefinition) -> None:
 
 
 class DatasetCache:
-    def __init__(self, directory: Path, ttl_hours: int = 24):
+    def __init__(self, directory: Path, ttl_hours: int = 720):
         self.directory = directory
         self.ttl = timedelta(hours=ttl_hours)
 

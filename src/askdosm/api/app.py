@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import json
-from contextlib import asynccontextmanager
+import logging
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from urllib.request import urlopen
 
@@ -19,6 +20,11 @@ from askdosm.api.models import HealthStatus, RunCreateRequest, RunSnapshot, RunS
 from askdosm.api.store import RunStore
 from askdosm.catalogue import Catalogue
 from askdosm.config import Settings, get_settings
+from askdosm.data import DatasetCache
+from askdosm.monitor import CatalogueMonitor, MonitorState
+
+
+logger = logging.getLogger(__name__)
 
 
 def create_app(settings: Settings | None = None, service_factory=None) -> FastAPI:
@@ -26,13 +32,36 @@ def create_app(settings: Settings | None = None, service_factory=None) -> FastAP
     store = RunStore(config.run_db_path)
     factory = service_factory or (lambda: AskDOSMService(config))
     manager = RunManager(store, factory, config.run_retention_days)
+    monitor = CatalogueMonitor(
+        Catalogue(config.catalogue_path),
+        DatasetCache(config.cache_dir / "datasets", config.cache_ttl_hours),
+        config.cache_dir / "catalogue-monitor.json",
+    )
+    monitor_lock = asyncio.Lock()
+
+    async def check_catalogue() -> MonitorState:
+        async with monitor_lock:
+            return await asyncio.to_thread(monitor.check)
+
+    async def monitor_loop() -> None:
+        while True:
+            try:
+                await check_catalogue()
+            except Exception:
+                logger.exception("Catalogue monitoring cycle failed")
+            await asyncio.sleep(config.monitor_interval_hours * 3600)
 
     @asynccontextmanager
     async def lifespan(application: FastAPI):
         application.state.store = store
         application.state.manager = manager
+        application.state.monitor = monitor
         await manager.start()
+        monitor_task = asyncio.create_task(monitor_loop(), name="askdosm-catalogue-monitor")
         yield
+        monitor_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await monitor_task
         await manager.stop()
 
     app = FastAPI(title="AskDOSM API", version="0.2.0", lifespan=lifespan)
@@ -69,6 +98,14 @@ def create_app(settings: Settings | None = None, service_factory=None) -> FastAP
             item.model_dump(mode="json", exclude={"parquet_url", "expected_schema", "default_filters"})
             for item in Catalogue(config.catalogue_path).all()
         ]
+
+    @app.get("/api/catalogue-monitor", response_model=MonitorState)
+    async def catalogue_monitor() -> MonitorState:
+        return await asyncio.to_thread(monitor.read_state)
+
+    @app.post("/api/catalogue-monitor/check", response_model=MonitorState)
+    async def check_catalogue_now() -> MonitorState:
+        return await check_catalogue()
 
     @app.post("/api/runs", response_model=RunSnapshot, status_code=status.HTTP_202_ACCEPTED)
     async def create_run(body: RunCreateRequest) -> RunSnapshot:

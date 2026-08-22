@@ -94,7 +94,8 @@ Runs move through `queued`, `running`, `completed`, `failed`, or `interrupted`. 
 | `ASKDOSM_OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama service endpoint |
 | `ASKDOSM_REQUEST_TIMEOUT` | `30` | Reserved request timeout in seconds |
 | `ASKDOSM_CACHE_DIR` | `.askdosm-cache` | Local public-data cache |
-| `ASKDOSM_CACHE_TTL_HOURS` | `24` | Refresh interval |
+| `ASKDOSM_CACHE_TTL_HOURS` | `720` | Dataset refresh interval (30 days) |
+| `ASKDOSM_MONITOR_INTERVAL_HOURS` | `168` | Weekly check for official file changes and catalogue additions |
 | `ASKDOSM_RUN_DB_PATH` | `.askdosm-cache/runs.sqlite3` | SQLite run and event store |
 | `ASKDOSM_RUN_RETENTION_DAYS` | `7` | Run-history retention |
 | `ASKDOSM_MAX_CONCURRENT_RUNS` | `1` | Documented run concurrency; the MVP queue is single-worker |

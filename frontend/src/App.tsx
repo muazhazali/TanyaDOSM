@@ -4,7 +4,7 @@ import { Activity, BarChart3, Clock3, Database, ExternalLink, Menu, Send, Trash2
 import { api, subscribeToRun } from './api'
 import { ResultChart } from './Chart'
 import { initialStreamState, latestArtifact, streamReducer } from './runState'
-import type { AnswerPayload, DatasetDefinition, RunEvent, RunSnapshot, RunStatus } from './types'
+import type { AnswerPayload, CatalogueMonitorState, DatasetDefinition, RunEvent, RunSnapshot, RunStatus } from './types'
 
 const examples = [
   "What is Malaysia's latest population?",
@@ -90,7 +90,7 @@ function Inspector({ events, snapshot }: { events: RunEvent[]; snapshot?: RunSna
   )
 }
 
-function DatasetCatalogue({ datasets, loading }: { datasets?: DatasetDefinition[]; loading: boolean }) {
+function DatasetCatalogue({ datasets, monitor, loading }: { datasets?: DatasetDefinition[]; monitor?: CatalogueMonitorState; loading: boolean }) {
   return (
     <section className="mt-8" aria-labelledby="available-datasets-heading">
       <div className="flex items-end justify-between gap-4">
@@ -124,10 +124,28 @@ function DatasetCatalogue({ datasets, loading }: { datasets?: DatasetDefinition[
                   </span>
                 ))}
               </div>
+              {monitor?.registered[dataset.dataset_id] && (
+                <p className={`mt-3 text-xs ${monitor.registered[dataset.dataset_id].status === 'error' ? 'text-red-700' : 'text-slate-500'}`}>
+                  Monitor: {monitor.registered[dataset.dataset_id].status}
+                  {monitor.registered[dataset.dataset_id].last_checked && ` · checked ${new Date(monitor.registered[dataset.dataset_id].last_checked!).toLocaleString()}`}
+                </p>
+              )}
             </article>
           ))}
         </div>
       )}
+      {monitor?.discovered.length ? (
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <h4 className="font-semibold text-amber-900">New DOSM datasets awaiting review</h4>
+          <ul className="mt-2 space-y-1 text-sm text-amber-800">
+            {monitor.discovered.map((dataset) => (
+              <li key={dataset.dataset_id}>
+                {dataset.source_url ? <a className="underline" href={dataset.source_url} target="_blank" rel="noreferrer">{dataset.title || dataset.dataset_id}</a> : dataset.title || dataset.dataset_id}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </section>
   )
 }
@@ -141,6 +159,7 @@ export default function App() {
   const runs = useQuery({ queryKey: ['runs'], queryFn: api.listRuns, refetchInterval: 5000 })
   const health = useQuery({ queryKey: ['health'], queryFn: api.health, refetchInterval: 30000, retry: false })
   const datasets = useQuery({ queryKey: ['datasets'], queryFn: api.datasets, staleTime: 5 * 60 * 1000 })
+  const catalogueMonitor = useQuery({ queryKey: ['catalogue-monitor'], queryFn: api.catalogueMonitor, refetchInterval: 60 * 1000 })
   const selected = useQuery({ queryKey: ['run', selectedId], queryFn: () => api.getRun(selectedId!), enabled: !!selectedId, refetchInterval: selectedId ? 1000 : false })
 
   useEffect(() => {
@@ -201,7 +220,7 @@ export default function App() {
             {create.error && <p className="mt-3 text-sm text-red-700">{create.error.message}</p>}
             {!selectedId && <div className="mt-8"><h3 className="text-sm font-semibold text-slate-600">Try an example</h3><div className="mt-3 grid gap-3 sm:grid-cols-2">{examples.map((example) => <button key={example} onClick={() => setQuestion(example)} className="rounded-xl border border-slate-200 bg-white p-4 text-left text-sm hover:border-emerald-400">{example}</button>)}</div></div>}
             {selectedId && <div className="mt-8 space-y-5"><div className="flex flex-wrap items-center gap-3"><StatusPill status={snapshot?.status || 'queued'} /><p className="font-medium">{snapshot?.question}</p></div>{active && <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5"><p className="font-semibold text-blue-900">{snapshot.status === 'queued' ? 'Waiting for the model…' : `Processing: ${nodeLabels[snapshot.current_node || ''] || snapshot.current_node || 'starting'}`}</p><p className="mt-1 text-sm text-blue-700">Progress is saved and can be recovered after a refresh.</p></div>}{snapshot?.error && <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-800">{snapshot.error}</div>}{snapshot?.answer && <Results answer={snapshot.answer} />}</div>}
-            <DatasetCatalogue datasets={datasets.data} loading={datasets.isLoading} />
+            <DatasetCatalogue datasets={datasets.data} monitor={catalogueMonitor.data} loading={datasets.isLoading} />
           </div>
         </main>
         <Inspector events={stream.events} snapshot={snapshot} />

@@ -71,3 +71,21 @@ export interface DatasetDefinition {
   source_url: string
   caveats: string[]
 }
+
+export interface CatalogueMonitorState {
+  last_checked?: string | null
+  registered: Record<string, {
+    dataset_id: string
+    last_checked?: string | null
+    last_changed?: string | null
+    status: string
+    error?: string | null
+  }>
+  discovered: Array<{
+    dataset_id: string
+    title?: string | null
+    source_url?: string | null
+    discovered_at: string
+  }>
+  discovery_error?: string | null
+}
