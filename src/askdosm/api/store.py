@@ -1,4 +1,4 @@
-"""Durable SQLite storage for independent AskDOSM runs and events."""
+"""Durable SQLite storage for independent TanyaDOSM runs and events."""
 
 from __future__ import annotations
 

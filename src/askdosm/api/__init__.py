@@ -1,2 +1,1 @@
-"""HTTP API for AskDOSM."""
-
+"""HTTP API for TanyaDOSM."""

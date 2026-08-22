@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from askdosm.agent import AskDOSMService
+from askdosm.agent import TanyaDOSMService
 from askdosm.api.manager import RunManager
 from askdosm.api.models import HealthStatus, RunCreateRequest, RunSnapshot, RunSummary, TERMINAL_STATUSES
 from askdosm.api.store import RunStore
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 def create_app(settings: Settings | None = None, service_factory=None) -> FastAPI:
     config = settings or get_settings()
     store = RunStore(config.run_db_path)
-    factory = service_factory or (lambda: AskDOSMService(config))
+    factory = service_factory or (lambda: TanyaDOSMService(config))
     manager = RunManager(store, factory, config.run_retention_days)
     monitor = CatalogueMonitor(
         Catalogue(config.catalogue_path),
@@ -64,7 +64,7 @@ def create_app(settings: Settings | None = None, service_factory=None) -> FastAP
             await monitor_task
         await manager.stop()
 
-    app = FastAPI(title="AskDOSM API", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="TanyaDOSM API", version="0.2.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=config.cors_origin_list,
@@ -174,7 +174,7 @@ def create_app(settings: Settings | None = None, service_factory=None) -> FastAP
     else:
         @app.get("/", include_in_schema=False)
         async def root():
-            return JSONResponse({"name": "AskDOSM API", "frontend": "Run pnpm build in frontend/"})
+            return JSONResponse({"name": "TanyaDOSM API", "frontend": "Run pnpm build in frontend/"})
 
     return app
 

@@ -1,4 +1,4 @@
-"""Compiled AskDOSM LangGraph and public service facade."""
+"""Compiled TanyaDOSM LangGraph and public service facade."""
 
 from __future__ import annotations
 
@@ -158,7 +158,7 @@ def build_graph(services: NodeServices):
     return graph.compile()
 
 
-class AskDOSMService:
+class TanyaDOSMService:
     def __init__(self, settings: Settings | None = None, *, llm=None, embedder=None, cache=None):
         self.settings = settings or get_settings()
         if llm is None:
@@ -191,3 +191,7 @@ class AskDOSMService:
             initial_state["event_sink"] = event_sink
         state = self.graph.invoke(initial_state)
         return state["answer"]
+
+
+# Backward-compatible public alias for integrations using the former name.
+AskDOSMService = TanyaDOSMService

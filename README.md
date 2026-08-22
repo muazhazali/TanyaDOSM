@@ -1,6 +1,6 @@
-# AskDOSM
+# TanyaDOSM
 
-AskDOSM is a local natural-language analytics assistant for five curated Malaysian public-statistics datasets. A React interface streams a sanitized view of its LangGraph workflow while FastAPI, local Ollama, and deterministic Pandas/DuckDB operations produce source-grounded results.
+TanyaDOSM is a local natural-language analytics assistant for five curated Malaysian public-statistics datasets. A React interface streams a sanitized view of its LangGraph workflow while FastAPI, local Ollama, and deterministic Pandas/DuckDB operations produce source-grounded results.
 
 ## Requirements and setup
 
@@ -49,7 +49,20 @@ The verified Python 3.14.6 environment resolves FastAPI, Uvicorn, aiosqlite, Lan
 | `lfs_qtr_state` | Quarterly, state | State unemployment comparisons |
 | `cpi_state_inflation` | Monthly, state | State inflation comparisons and trends |
 
-Source files are downloaded from official DOSM Parquet URLs. They are validated before replacing the last usable file under `.askdosm-cache/datasets`. Catalogue embeddings are cached separately; statistical rows are never embedded.
+Source files are downloaded from official DOSM Parquet URLs. They are validated before replacing the last usable file under `.askdosm-cache/datasets`. Catalogue embeddings are cached separately; statistical rows are never embedded. The web interface lists the available datasets, their frequency and geographic coverage, queryable measures, official source links, and latest monitoring status.
+
+### Dataset cache and monitoring
+
+TanyaDOSM uses two complementary update mechanisms:
+
+1. **Weekly monitoring:** while the backend is running, it checks registered DOSM files every 168 hours. The first check runs when the backend starts. Remote `ETag`, `Last-Modified`, and content-length values are compared with the previous check.
+2. **Monthly cache expiry:** a cached dataset is considered stale after 720 hours (30 days). The first query after expiry attempts a refresh, providing a fallback if remote change metadata was unavailable.
+
+When the weekly monitor detects a change, it downloads the Parquet file to a temporary location and validates the expected schema before replacing the cache. If download or validation fails, TanyaDOSM retains the last valid copy and records an error in the monitoring state.
+
+The monitor also compares the official [`data-gov-my/datagovmy-meta`](https://github.com/data-gov-my/datagovmy-meta) catalogue with its previous snapshot. Newly added entries whose metadata identifies DOSM as a source are shown as **awaiting review**. They are not made queryable automatically because dimensions, measures, units, filters, aliases, and schema must be reviewed before registration in `data/catalogue.json`.
+
+Monitoring state is persisted at `.askdosm-cache/catalogue-monitor.json`. Restarting the backend does not discard the previous fingerprints or discovery baseline. A backend that is stopped cannot perform scheduled checks; deploy an external scheduler against the manual check endpoint if checks must occur independently of process uptime.
 
 ## Architecture
 
@@ -77,6 +90,8 @@ The browser receives node status and approved structured artifacts over Server-S
 |---|---|---|
 | `GET` | `/api/health` | Check catalogue, SQLite, and Ollama readiness |
 | `GET` | `/api/datasets` | List the five public dataset definitions |
+| `GET` | `/api/catalogue-monitor` | Read registered-file status and review-only discoveries |
+| `POST` | `/api/catalogue-monitor/check` | Run an immediate monitoring and refresh check |
 | `POST` | `/api/runs` | Queue an independent question (maximum 500 characters) |
 | `GET` | `/api/runs` | List recent runs |
 | `GET` | `/api/runs/{id}` | Read a run snapshot and final answer |
@@ -84,6 +99,12 @@ The browser receives node status and approved structured artifacts over Server-S
 | `DELETE` | `/api/runs/{id}` | Delete a completed, failed, or interrupted run |
 
 Runs move through `queued`, `running`, `completed`, `failed`, or `interrupted`. A process restart marks unfinished work as interrupted rather than executing it again unexpectedly.
+
+To trigger an immediate check manually:
+
+```powershell
+Invoke-RestMethod -Method Post http://localhost:8000/api/catalogue-monitor/check
+```
 
 ## Configuration
 
@@ -133,4 +154,6 @@ The benchmark in `evals/questions.json` contains 50 cases. `evals/evaluate.py` v
 - CPI is representative of an average consumer basket, not an individual's exact experienced inflation.
 - Only one of the five registered datasets may be used per question.
 - GDP, crime, district population, forecasting, multi-dataset joins, conversational context, downloads, public hosting, and authentication are out of scope.
-- If a source changes schema, returns no matching records, or cannot support a requested period, AskDOSM fails explicitly instead of inventing a value.
+- If a source changes schema, returns no matching records, or cannot support a requested period, TanyaDOSM fails explicitly instead of inventing a value.
+
+The internal Python import namespace (`askdosm`), environment-variable prefix (`ASKDOSM_`), and existing cache directory (`.askdosm-cache`) are retained for backward compatibility.

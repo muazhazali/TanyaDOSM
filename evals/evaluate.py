@@ -1,4 +1,4 @@
-"""Offline structural checks for the fixed AskDOSM benchmark."""
+"""Offline structural checks for the fixed TanyaDOSM benchmark."""
 
 from __future__ import annotations
 

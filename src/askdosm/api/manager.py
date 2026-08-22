@@ -7,20 +7,20 @@ from collections.abc import Callable
 from contextlib import suppress
 from uuid import uuid4
 
-from askdosm.agent import AskDOSMService
+from askdosm.agent import TanyaDOSMService
 from askdosm.api.models import RunSnapshot, RunStatus
 from askdosm.api.store import RunStore
 
 
 class RunManager:
-    def __init__(self, store: RunStore, service_factory: Callable[[], AskDOSMService], retention_days: int = 7):
+    def __init__(self, store: RunStore, service_factory: Callable[[], TanyaDOSMService], retention_days: int = 7):
         self.store = store
         self.service_factory = service_factory
         self.retention_days = retention_days
         self.queue: asyncio.Queue[str] = asyncio.Queue()
         self._worker: asyncio.Task | None = None
         self._maintenance: asyncio.Task | None = None
-        self._service: AskDOSMService | None = None
+        self._service: TanyaDOSMService | None = None
 
     async def start(self) -> None:
         await self.store.initialize()
@@ -81,7 +81,7 @@ class RunManager:
                 run_id, {"type": "run.completed", "payload": {"has_error": answer.error is not None}}
             )
         except Exception as exc:
-            message = f"AskDOSM could not complete this run ({type(exc).__name__})."
+            message = f"TanyaDOSM could not complete this run ({type(exc).__name__})."
             await self.store.update_status(run_id, RunStatus.FAILED, error=message)
             await self.store.append_event(
                 run_id, {"type": "run.failed", "payload": {"error": message}}

@@ -1,5 +1,5 @@
 [project]
-name = "askdosm"
+name = "tanyadosm"
 version = "0.1.0"
 description = "A source-grounded natural-language analytics assistant for Malaysian public statistics"
 readme = "README.md"

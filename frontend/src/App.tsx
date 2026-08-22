@@ -152,7 +152,7 @@ function DatasetCatalogue({ datasets, monitor, loading }: { datasets?: DatasetDe
 
 export default function App() {
   const queryClient = useQueryClient()
-  const [selectedId, setSelectedId] = useState<string | null>(() => localStorage.getItem('askdosm-active-run'))
+  const [selectedId, setSelectedId] = useState<string | null>(() => localStorage.getItem('tanyadosm-active-run'))
   const [question, setQuestion] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [stream, dispatch] = useReducer(streamReducer, initialStreamState)
@@ -163,8 +163,8 @@ export default function App() {
   const selected = useQuery({ queryKey: ['run', selectedId], queryFn: () => api.getRun(selectedId!), enabled: !!selectedId, refetchInterval: selectedId ? 1000 : false })
 
   useEffect(() => {
-    if (selectedId) localStorage.setItem('askdosm-active-run', selectedId)
-    else localStorage.removeItem('askdosm-active-run')
+    if (selectedId) localStorage.setItem('tanyadosm-active-run', selectedId)
+    else localStorage.removeItem('tanyadosm-active-run')
   }, [selectedId])
 
   useEffect(() => {
@@ -199,7 +199,7 @@ export default function App() {
       <div className="grid min-h-screen lg:grid-cols-[280px_minmax(0,1fr)_360px]">
         <aside className={`${sidebarOpen ? 'fixed inset-0 z-30 block' : 'hidden'} border-r border-slate-200 bg-slate-950 text-white lg:static lg:block`}>
           <div className="flex h-full flex-col p-5">
-            <div className="flex items-center justify-between"><div className="flex items-center gap-3"><BarChart3 className="text-emerald-400" /><div><h1 className="text-xl font-bold">AskDOSM</h1><p className="text-xs text-slate-400">Official data, explained</p></div></div><button className="lg:hidden" aria-label="Close recent runs" onClick={() => setSidebarOpen(false)}><X /></button></div>
+            <div className="flex items-center justify-between"><div className="flex items-center gap-3"><BarChart3 className="text-emerald-400" /><div><h1 className="text-xl font-bold">TanyaDOSM</h1><p className="text-xs text-slate-400">Official data, explained</p></div></div><button className="lg:hidden" aria-label="Close recent runs" onClick={() => setSidebarOpen(false)}><X /></button></div>
             <div className="mt-7 flex items-center gap-2 text-xs text-slate-400"><span className={`h-2 w-2 rounded-full ${health.data?.ollama === 'ready' ? 'bg-emerald-400' : 'bg-amber-400'}`} />Ollama {health.data?.ollama || 'checking'}</div>
             <h2 className="mt-8 flex items-center gap-2 text-sm font-semibold text-slate-300"><Clock3 size={16} /> Recent runs</h2>
             <nav className="mt-3 flex-1 space-y-2 overflow-y-auto" aria-label="Recent runs">

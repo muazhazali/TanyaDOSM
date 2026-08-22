@@ -68,13 +68,13 @@ class CatalogueMonitor:
 
     @staticmethod
     def _request_json(url: str) -> Any:
-        request = urllib.request.Request(url, headers={"User-Agent": "AskDOSM/0.2"})
+        request = urllib.request.Request(url, headers={"User-Agent": "TanyaDOSM/0.2"})
         with urllib.request.urlopen(request, timeout=20) as response:
             return json.load(response)
 
     @staticmethod
     def _remote_headers(url: str) -> dict[str, str | None]:
-        request = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "AskDOSM/0.2"})
+        request = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "TanyaDOSM/0.2"})
         with urllib.request.urlopen(request, timeout=20) as response:
             return {
                 "etag": response.headers.get("ETag"),

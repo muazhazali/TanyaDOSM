@@ -1,6 +1,5 @@
-"""LangGraph orchestration for AskDOSM."""
+"""LangGraph orchestration for TanyaDOSM."""
 
-from askdosm.agent.graph import AskDOSMService
+from askdosm.agent.graph import AskDOSMService, TanyaDOSMService
 
-__all__ = ["AskDOSMService"]
-
+__all__ = ["AskDOSMService", "TanyaDOSMService"]

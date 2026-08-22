@@ -1,14 +1,14 @@
-# PRD — AskDOSM
+# PRD — TanyaDOSM
 
 ## 1. Product Summary
 
-**Product name:** AskDOSM  
+**Product name:** TanyaDOSM  
 **Working title alternatives:** DOSMChat, StatMY  
 **Document type:** Product Requirements Document  
 **Version:** 0.1  
 **Status:** Draft / MVP Planning
 
-AskDOSM is a conversational data assistant for Malaysia's OpenDOSM public statistics platform.
+TanyaDOSM is a conversational data assistant for Malaysia's OpenDOSM public statistics platform.
 
 Users ask questions in natural language, such as:
 
@@ -38,7 +38,7 @@ OpenDOSM provides valuable official Malaysian statistics, but users often need t
 
 This creates friction for users who know the question they want to answer but do not know which dataset or analytical steps are required.
 
-AskDOSM aims to reduce that friction by converting natural-language questions into transparent, reproducible data queries and analyses.
+TanyaDOSM aims to reduce that friction by converting natural-language questions into transparent, reproducible data queries and analyses.
 
 ---
 
@@ -970,7 +970,7 @@ The page should contain:
 ### Header
 
 ```text
-AskDOSM
+TanyaDOSM
 Ask questions about Malaysian public statistics
 ```
 
@@ -1703,7 +1703,7 @@ A stronger description is:
 
 # 35. Definition of Done
 
-AskDOSM MVP is considered complete when a new user can:
+TanyaDOSM MVP is considered complete when a new user can:
 
 1. Open the application.
 2. Ask a statistical question without knowing a dataset name.
