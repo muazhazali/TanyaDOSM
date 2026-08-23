@@ -182,3 +182,8 @@ class AnswerPayload(BaseModel):
     source: SourceReference | None = None
     trace: ExecutionTrace = Field(default_factory=ExecutionTrace)
     error: str | None = None
+class ContextResolution(BaseModel):
+    """A standalone question reconstructed from bounded conversation context."""
+
+    model_config = ConfigDict(extra="forbid")
+    standalone_question: str = Field(min_length=1, max_length=500)

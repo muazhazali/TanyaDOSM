@@ -27,12 +27,27 @@ export interface AnswerPayload {
 
 export interface RunSummary {
   id: string
+  conversation_id: string
   question: string
+  resolved_question?: string | null
   status: RunStatus
   current_node?: string | null
   error?: string | null
   created_at: string
   updated_at: string
+}
+
+export interface ConversationSummary {
+  id: string
+  title: string
+  created_at: string
+  updated_at: string
+  turn_count: number
+  latest_status: RunStatus
+}
+
+export interface ConversationSnapshot extends ConversationSummary {
+  turns: RunSnapshot[]
 }
 
 export interface RunSnapshot extends RunSummary {

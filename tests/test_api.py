@@ -14,6 +14,14 @@ from askdosm.providers import HostedProviderError
 
 
 class FakeService:
+    resolved = []
+
+    def resolve_question(self, question, history):
+        assert history[-1]["assistant"] == "A validated answer"
+        resolved = f"Resolved: {question}"
+        self.resolved.append(resolved)
+        return resolved
+
     def ask(self, question, *, event_sink=None):
         assert question
         if event_sink:
@@ -56,6 +64,43 @@ def test_api_validates_question(tmp_path):
     with TestClient(app) as client:
         assert client.post("/api/runs", json={"question": ""}).status_code == 422
         assert client.get("/api/runs/missing").status_code == 404
+
+
+def test_follow_up_reuses_conversation_and_persists_resolved_question(tmp_path):
+    FakeService.resolved.clear()
+    app = create_app(api_settings(tmp_path), service_factory=FakeService)
+    with TestClient(app) as client:
+        first = client.post("/api/runs", json={"question": "Population in Johor in 2025?"}).json()
+        for _ in range(100):
+            if client.get(f"/api/runs/{first['id']}").json()["status"] == "completed":
+                break
+            asyncio.run(asyncio.sleep(0.01))
+        second = client.post(
+            "/api/runs",
+            json={"question": "What about Selangor?", "conversation_id": first["conversation_id"]},
+        ).json()
+        for _ in range(100):
+            snapshot = client.get(f"/api/runs/{second['id']}").json()
+            if snapshot["status"] == "completed":
+                break
+            asyncio.run(asyncio.sleep(0.01))
+        conversation = client.get(f"/api/conversations/{first['conversation_id']}").json()
+
+    assert conversation["turn_count"] == 2
+    assert [turn["question"] for turn in conversation["turns"]] == [
+        "Population in Johor in 2025?", "What about Selangor?",
+    ]
+    assert snapshot["resolved_question"] == "Resolved: What about Selangor?"
+    assert FakeService.resolved == ["Resolved: What about Selangor?"]
+
+
+def test_follow_up_rejects_unknown_conversation(tmp_path):
+    app = create_app(api_settings(tmp_path), service_factory=FakeService)
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/runs", json={"question": "What about Selangor?", "conversation_id": "missing"}
+        )
+    assert response.status_code == 404
 
 
 def test_health_reports_hosted_providers(tmp_path, monkeypatch):
@@ -131,3 +176,34 @@ async def test_store_replays_legacy_list_payload_as_an_object(tmp_path):
     events = await store.get_events("legacy")
 
     assert events[0].payload == {"items": [{"dataset_id": "population_malaysia"}]}
+
+
+@pytest.mark.asyncio
+async def test_store_migrates_independent_runs_to_one_turn_conversations(tmp_path):
+    path = tmp_path / "legacy.sqlite3"
+    async with aiosqlite.connect(path) as db:
+        await db.executescript(
+            """CREATE TABLE runs (
+                id TEXT PRIMARY KEY, question TEXT NOT NULL, status TEXT NOT NULL,
+                current_node TEXT, answer_json TEXT, error TEXT,
+                created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+            );
+            CREATE TABLE run_events (
+                run_id TEXT NOT NULL, sequence INTEGER NOT NULL, type TEXT NOT NULL,
+                node TEXT, duration_ms REAL, payload_json TEXT NOT NULL, timestamp TEXT NOT NULL,
+                PRIMARY KEY (run_id, sequence)
+            );"""
+        )
+        await db.execute(
+            "INSERT INTO runs (id, question, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+            ("old", "Legacy question", "completed", "2026-01-01T00:00:00+00:00", "2026-01-01T00:00:00+00:00"),
+        )
+        await db.commit()
+
+    store = RunStore(path)
+    await store.initialize()
+    conversation = await store.get_conversation("old")
+
+    assert conversation is not None
+    assert conversation.title == "Legacy question"
+    assert conversation.turns[0].conversation_id == "old"

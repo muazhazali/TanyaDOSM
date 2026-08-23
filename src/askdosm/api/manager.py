@@ -40,9 +40,9 @@ class RunManager:
             with suppress(asyncio.CancelledError):
                 await self._maintenance
 
-    async def create(self, question: str) -> RunSnapshot:
+    async def create(self, question: str, conversation_id: str | None = None) -> RunSnapshot:
         run_id = uuid4().hex
-        snapshot = await self.store.create_run(run_id, question)
+        snapshot = await self.store.create_run(run_id, question, conversation_id)
         await self.store.append_event(run_id, {"type": "run.queued", "payload": {}})
         await self.queue.put(run_id)
         refreshed = await self.store.get_run(run_id)
@@ -76,7 +76,20 @@ class RunManager:
         try:
             if self._service is None:
                 self._service = await asyncio.to_thread(self.service_factory)
-            answer = await asyncio.to_thread(self._service.ask, snapshot.question, event_sink=sink)
+            history = await self.store.get_context(
+                snapshot.conversation_id, exclude_run_id=run_id
+            )
+            resolved_question = snapshot.question
+            if history:
+                resolved_question = await asyncio.to_thread(
+                    self._service.resolve_question, snapshot.question, history
+                )
+                await self.store.append_event(
+                    run_id,
+                    {"type": "context.resolved", "payload": {"question": resolved_question}},
+                )
+            await self.store.set_resolved_question(run_id, resolved_question)
+            answer = await asyncio.to_thread(self._service.ask, resolved_question, event_sink=sink)
             await self.store.update_status(run_id, RunStatus.COMPLETED, answer=answer)
             await self.store.append_event(
                 run_id, {"type": "run.completed", "payload": {"has_error": answer.error is not None}}

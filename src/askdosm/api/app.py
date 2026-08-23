@@ -16,7 +16,10 @@ from fastapi.staticfiles import StaticFiles
 
 from askdosm.agent import TanyaDOSMService
 from askdosm.api.manager import RunManager
-from askdosm.api.models import HealthStatus, RunCreateRequest, RunSnapshot, RunSummary, TERMINAL_STATUSES
+from askdosm.api.models import (
+    ConversationSnapshot, ConversationSummary, HealthStatus, RunCreateRequest,
+    RunSnapshot, RunSummary, TERMINAL_STATUSES,
+)
 from askdosm.api.store import RunStore
 from askdosm.catalogue import Catalogue
 from askdosm.config import Settings, get_settings
@@ -129,7 +132,21 @@ def create_app(settings: Settings | None = None, service_factory=None) -> FastAP
     async def create_run(body: RunCreateRequest) -> RunSnapshot:
         if len(body.question) > config.max_question_length:
             raise HTTPException(status_code=422, detail="Question is too long")
-        return await manager.create(body.question)
+        try:
+            return await manager.create(body.question, body.conversation_id)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="Conversation not found") from None
+
+    @app.get("/api/conversations", response_model=list[ConversationSummary])
+    async def list_conversations(limit: int = Query(default=20, ge=1, le=100)) -> list[ConversationSummary]:
+        return await store.list_conversations(limit)
+
+    @app.get("/api/conversations/{conversation_id}", response_model=ConversationSnapshot)
+    async def get_conversation(conversation_id: str) -> ConversationSnapshot:
+        conversation = await store.get_conversation(conversation_id)
+        if conversation is None:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        return conversation
 
     @app.get("/api/runs", response_model=list[RunSummary])
     async def list_runs(limit: int = Query(default=20, ge=1, le=100)) -> list[RunSummary]:

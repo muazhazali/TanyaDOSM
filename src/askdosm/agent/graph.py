@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from pathlib import Path
 from time import perf_counter
@@ -15,7 +16,8 @@ from askdosm.agent.state import AgentState
 from askdosm.catalogue import Catalogue
 from askdosm.config import Settings, get_settings
 from askdosm.data import DatasetCache
-from askdosm.models import AnswerPayload
+from askdosm.models import AnswerPayload, ContextResolution
+from askdosm.agent.prompts import CONTEXT_SYSTEM
 from askdosm.providers import create_chat_model, create_embedder
 
 
@@ -174,6 +176,19 @@ class TanyaDOSMService:
             max_retries=self.settings.max_retries,
         )
         self.graph = build_graph(services)
+        self.llm = llm
+
+    def resolve_question(self, question: str, history: list[dict[str, str]]) -> str:
+        """Resolve a follow-up using a small, trusted-context prompt."""
+        if not history:
+            return question.strip()
+        resolver = self.llm.with_structured_output(ContextResolution)
+        context = {"previous_turns": history[-6:], "latest_user_message": question.strip()}
+        result = resolver.invoke([
+            ("system", CONTEXT_SYSTEM),
+            ("human", json.dumps(context, ensure_ascii=False)),
+        ])
+        return result.standalone_question.strip()
 
     def ask(self, question: str, *, event_sink: Callable[[dict[str, Any]], None] | None = None) -> AnswerPayload:
         if not question.strip():

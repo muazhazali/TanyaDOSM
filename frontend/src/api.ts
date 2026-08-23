@@ -1,4 +1,4 @@
-import type { CatalogueMonitorState, DatasetDefinition, HealthStatus, RunEvent, RunSnapshot, RunSummary } from './types'
+import type { CatalogueMonitorState, ConversationSnapshot, ConversationSummary, DatasetDefinition, HealthStatus, RunEvent, RunSnapshot, RunSummary } from './types'
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init)
@@ -14,12 +14,14 @@ export const api = {
   datasets: () => request<DatasetDefinition[]>('/api/datasets'),
   catalogueMonitor: () => request<CatalogueMonitorState>('/api/catalogue-monitor'),
   listRuns: () => request<RunSummary[]>('/api/runs?limit=50'),
+  listConversations: () => request<ConversationSummary[]>('/api/conversations?limit=50'),
+  getConversation: (id: string) => request<ConversationSnapshot>(`/api/conversations/${id}`),
   getRun: (id: string) => request<RunSnapshot>(`/api/runs/${id}`),
-  createRun: (question: string) =>
+  createRun: ({ question, conversationId }: { question: string; conversationId?: string | null }) =>
     request<RunSnapshot>('/api/runs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question, conversation_id: conversationId || null }),
     }),
   deleteRun: (id: string) => request<void>(`/api/runs/${id}`, { method: 'DELETE' }),
 }
@@ -36,7 +38,7 @@ export function subscribeToRun(
     if (event.type === 'run.completed' || event.type === 'run.failed') source.close()
   }
   const eventTypes = [
-    'run.queued', 'run.started', 'run.completed', 'run.failed',
+    'run.queued', 'run.started', 'run.completed', 'run.failed', 'context.resolved',
     'node.started', 'node.completed', 'node.failed', 'intent', 'candidates',
     'selection', 'schema', 'query_plan', 'data_summary', 'analysis',
     'validation', 'retry', 'visualization', 'result',

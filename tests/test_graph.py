@@ -8,9 +8,10 @@ from askdosm.agent.nodes import NodeServices
 from askdosm.agent.nodes import build_query_plan, generate_response
 from askdosm.catalogue import Catalogue
 from askdosm.models import (
-    AnalysisResult, FilterSpec, Operation, QueryPlan, QuestionIntent,
+    AnalysisResult, ContextResolution, FilterSpec, Operation, QueryPlan, QuestionIntent,
     ValidationResult, VisualizationSpec,
 )
+from askdosm.agent.graph import TanyaDOSMService
 
 
 class FakeRunnable:
@@ -142,3 +143,23 @@ def test_malay_minimum_answer_names_the_matching_state(tmp_path):
     assert "W.P. Labuan" in answer
     assert "52.9 ribu orang" in answer
     assert "paling sedikit" in answer
+
+
+def test_service_resolves_follow_up_with_bounded_structured_context():
+    class ResolverLLM:
+        def with_structured_output(self, schema):
+            assert schema is ContextResolution
+            return FakeRunnable(ContextResolution(
+                standalone_question="What was Selangor's population in 2025?"
+            ))
+
+    service = object.__new__(TanyaDOSMService)
+    service.llm = ResolverLLM()
+    history = [
+        {"user": f"Question {index}", "resolved": f"Resolved {index}", "assistant": f"Answer {index}"}
+        for index in range(10)
+    ]
+
+    resolved = service.resolve_question("What about Selangor?", history)
+
+    assert resolved == "What was Selangor's population in 2025?"

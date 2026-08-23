@@ -26,6 +26,7 @@ class RunCreateRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
     question: str = Field(min_length=1, max_length=500)
+    conversation_id: str | None = None
 
 
 class RunEvent(BaseModel):
@@ -44,7 +45,9 @@ class RunSummary(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: str
+    conversation_id: str
     question: str
+    resolved_question: str | None = None
     status: RunStatus
     current_node: str | None = None
     error: str | None = None
@@ -55,6 +58,21 @@ class RunSummary(BaseModel):
 class RunSnapshot(RunSummary):
     answer: AnswerPayload | None = None
     last_sequence: int = 0
+
+
+class ConversationSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    title: str
+    created_at: datetime
+    updated_at: datetime
+    turn_count: int
+    latest_status: RunStatus
+
+
+class ConversationSnapshot(ConversationSummary):
+    turns: list[RunSnapshot]
 
 
 class HealthStatus(BaseModel):
