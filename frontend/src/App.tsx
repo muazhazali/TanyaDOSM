@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useReducer, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Activity, BarChart3, Clock3, Database, ExternalLink, Menu, Send, Trash2, X } from 'lucide-react'
+import { AlertCircle, BarChart3, Check, Circle, Clock3, Database, ExternalLink, LoaderCircle, Menu, Send, Trash2, X } from 'lucide-react'
 import { api, subscribeToRun } from './api'
 import { ResultChart } from './Chart'
 import { initialStreamState, latestArtifact, streamReducer } from './runState'
@@ -19,6 +19,14 @@ const nodeLabels: Record<string, string> = {
   analyze_result: 'Calculate result', validate_result: 'Validate facts', generate_visualization: 'Choose visualization',
   generate_response: 'Prepare answer', graceful_failure: 'Prepare safe response',
 }
+
+const publicSteps = [
+  { label: 'Understanding your question', description: 'Identifying the topic, place and time period you asked about.', nodes: ['parse_question'] },
+  { label: 'Finding the right official data', description: 'Matching your question with the most relevant DOSM dataset.', nodes: ['search_catalogue', 'select_dataset'] },
+  { label: 'Checking the source', description: 'Confirming the available fields and freshness of the data.', nodes: ['inspect_schema'] },
+  { label: 'Working out the answer', description: 'Retrieving the relevant figures, calculating and checking the result.', nodes: ['build_query_plan', 'execute_query', 'analyze_result', 'validate_result'] },
+  { label: 'Preparing your result', description: 'Presenting the answer clearly with a useful chart when appropriate.', nodes: ['generate_visualization', 'generate_response', 'graceful_failure'] },
+] as const
 
 function StatusPill({ status }: { status: RunStatus }) {
   const colors: Record<RunStatus, string> = {
@@ -59,11 +67,28 @@ function Results({ answer }: { answer: AnswerPayload }) {
 
 function Timeline({ events }: { events: RunEvent[] }) {
   const nodeEvents = events.filter((event) => event.type.startsWith('node.'))
-  if (!nodeEvents.length) return <p className="text-sm text-slate-500">Execution details will appear here.</p>
-  return <ol className="space-y-3">{nodeEvents.map((event) => (
-    <li key={event.sequence} className="flex gap-3 text-sm">
-      <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${event.type === 'node.failed' ? 'bg-red-500' : event.type === 'node.completed' ? 'bg-emerald-500' : 'animate-pulse bg-blue-500'}`} />
-      <div><p className="font-medium text-slate-800">{nodeLabels[event.node || ''] || event.node}</p><p className="text-xs text-slate-500">{event.type.split('.')[1]}{event.duration_ms != null ? ` · ${Math.round(event.duration_ms)} ms` : ''}</p></div>
+  if (!nodeEvents.length) return <p className="text-sm text-slate-500">Your progress will appear here after you ask a question.</p>
+
+  const steps = publicSteps.map((step) => {
+    const relevant = nodeEvents.filter((event) => event.node && step.nodes.some((node) => node === event.node))
+    const completedNodes = new Set(relevant.filter((event) => event.type === 'node.completed').map((event) => event.node))
+    const failed = relevant.some((event) => event.type === 'node.failed')
+    const completed = !failed && relevant.length > 0 && relevant.every((event) => event.type !== 'node.started' || completedNodes.has(event.node))
+    const active = !failed && !completed && relevant.some((event) => event.type === 'node.started')
+    const duration = relevant.reduce((total, event) => total + (event.type === 'node.completed' ? event.duration_ms || 0 : 0), 0)
+    return { ...step, failed, completed, active, duration }
+  })
+  const visibleSteps = steps.filter((step, index) => step.completed || step.active || step.failed || steps.slice(index + 1).some((later) => later.completed || later.active || later.failed))
+
+  return <ol className="space-y-1">{visibleSteps.map((step) => (
+    <li key={step.label} className={`flex gap-3 rounded-xl p-3 ${step.active ? 'bg-blue-50' : step.failed ? 'bg-red-50' : ''}`}>
+      <span className="mt-0.5 shrink-0" aria-hidden="true">
+        {step.failed ? <AlertCircle size={20} className="text-red-600" /> : step.completed ? <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white"><Check size={13} strokeWidth={3} /></span> : step.active ? <LoaderCircle size={20} className="animate-spin text-blue-600" /> : <Circle size={20} className="text-slate-300" />}
+      </span>
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-x-2"><p className="text-sm font-semibold text-slate-800">{step.label}</p>{step.completed && step.duration > 0 && <span className="text-xs text-slate-400">{step.duration < 1000 ? `${Math.round(step.duration)} ms` : `${(step.duration / 1000).toFixed(1)} sec`}</span>}</div>
+        <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{step.failed ? 'We could not complete this step.' : step.active ? step.description : 'Done'}</p>
+      </div>
     </li>
   ))}</ol>
 }
@@ -76,16 +101,20 @@ function Inspector({ events, snapshot }: { events: RunEvent[]; snapshot?: RunSna
   ] as const, [])
   return (
     <aside className="space-y-5 border-l border-slate-200 bg-white p-5 lg:h-screen lg:overflow-y-auto">
-      <div><h2 className="flex items-center gap-2 font-bold"><Activity size={18} /> Execution</h2><p className="mt-1 text-xs text-slate-500">Sanitized workflow state—no hidden prompts or reasoning.</p></div>
+      <div><h2 className="font-bold">How we found your answer</h2><p className="mt-1 text-sm leading-relaxed text-slate-500">Follow the steps from your question to verified official data.</p></div>
       <Timeline events={events} />
-      <div className="space-y-2">
-        {artifacts.map(([label, type]) => {
-          const artifact = latestArtifact(events, type)
-          if (!artifact) return null
-          return <details key={type} className="rounded-xl border border-slate-200 p-3"><summary className="cursor-pointer text-sm font-semibold">{label}</summary><pre className="mt-3 overflow-x-auto whitespace-pre-wrap text-xs text-slate-600">{JSON.stringify(artifact.payload, null, 2)}</pre></details>
-        })}
-        {snapshot?.answer?.trace && <details className="rounded-xl border border-slate-200 p-3"><summary className="cursor-pointer text-sm font-semibold">Final execution trace</summary><pre className="mt-3 overflow-x-auto whitespace-pre-wrap text-xs text-slate-600">{JSON.stringify(snapshot.answer.trace, null, 2)}</pre></details>}
-      </div>
+      {(artifacts.some(([, type]) => latestArtifact(events, type)) || snapshot?.answer?.trace) && <details className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-700">View technical details</summary>
+        <p className="mt-2 text-xs leading-relaxed text-slate-500">For advanced users: structured data used to produce and verify this answer. Prompts and private reasoning are never shown.</p>
+        <div className="mt-3 space-y-2">
+          {artifacts.map(([label, type]) => {
+            const artifact = latestArtifact(events, type)
+            if (!artifact) return null
+            return <details key={type} className="rounded-lg border border-slate-200 bg-white p-3"><summary className="cursor-pointer text-xs font-semibold">{label}</summary><pre className="mt-3 overflow-x-auto whitespace-pre-wrap text-xs text-slate-600">{JSON.stringify(artifact.payload, null, 2)}</pre></details>
+          })}
+          {snapshot?.answer?.trace && <details className="rounded-lg border border-slate-200 bg-white p-3"><summary className="cursor-pointer text-xs font-semibold">Complete processing record</summary><pre className="mt-3 overflow-x-auto whitespace-pre-wrap text-xs text-slate-600">{JSON.stringify(snapshot.answer.trace, null, 2)}</pre></details>}
+        </div>
+      </details>}
     </aside>
   )
 }
