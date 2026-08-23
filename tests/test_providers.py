@@ -6,7 +6,7 @@ import pytest
 import askdosm.providers as providers
 from askdosm.catalogue import Catalogue
 from askdosm.config import Settings
-from askdosm.models import QuestionIntent
+from askdosm.models import QueryPlan, QuestionIntent
 
 
 def provider_settings(**updates) -> Settings:
@@ -54,6 +54,34 @@ def test_groq_uses_strict_json_schema(monkeypatch):
     )
     assert "default" not in str(observed["schema"]["schema"])
     assert observed["structured"] == {"method": "json_schema", "strict": True}
+
+
+def test_groq_schema_collapses_nullable_enum_references():
+    schema = providers._strict_json_schema(QuestionIntent)["schema"]
+
+    assert schema["properties"]["requested_output"] == {
+        "enum": ["none", "line", "bar", "ranking_bar", "table", None],
+        "type": ["string", "null"],
+    }
+    assert schema["properties"]["domain"] == {"type": ["string", "null"]}
+
+
+def test_groq_schema_removes_ambiguous_integer_number_union():
+    schema = providers._strict_json_schema(QueryPlan)["schema"]
+    value_schema = schema["$defs"]["FilterSpec"]["properties"]["value"]
+
+    def assert_no_integer_number_union(value):
+        if isinstance(value, dict):
+            branches = value.get("anyOf", [])
+            types = {branch.get("type") for branch in branches if isinstance(branch, dict)}
+            assert not {"integer", "number"}.issubset(types)
+            for nested in value.values():
+                assert_no_integer_number_union(nested)
+        elif isinstance(value, list):
+            for nested in value:
+                assert_no_integer_number_union(nested)
+
+    assert_no_integer_number_union(value_schema)
 
 
 def test_groq_retries_transient_failures_without_exposing_details(monkeypatch):

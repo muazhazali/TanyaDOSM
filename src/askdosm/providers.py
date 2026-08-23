@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
+from copy import deepcopy
 from typing import Any
 
 import httpx
@@ -38,10 +39,46 @@ def _strict_json_schema(model: type[BaseModel]) -> dict[str, Any]:
     """Convert Pydantic output into Groq's strict JSON Schema subset."""
     schema = model.model_json_schema()
 
+    def collapse_nullable(value: dict[str, Any]) -> None:
+        """Replace Pydantic's nullable ``anyOf`` with Groq's type union form."""
+        branches = value.get("anyOf")
+        if not isinstance(branches, list) or len(branches) != 2:
+            return
+        null_branches = [branch for branch in branches if branch == {"type": "null"}]
+        if len(null_branches) != 1:
+            return
+        non_null = next(branch for branch in branches if branch != {"type": "null"})
+        if "$ref" in non_null:
+            prefix = "#/$defs/"
+            reference = non_null["$ref"]
+            if not isinstance(reference, str) or not reference.startswith(prefix):
+                return
+            non_null = deepcopy(schema.get("$defs", {}).get(reference.removeprefix(prefix), {}))
+        scalar_type = non_null.get("type")
+        if not isinstance(scalar_type, str):
+            return
+        replacement = deepcopy(non_null)
+        replacement["type"] = [scalar_type, "null"]
+        if "enum" in replacement:
+            replacement["enum"] = [*replacement["enum"], None]
+        value.clear()
+        value.update(replacement)
+
+    def remove_ambiguous_integer_branch(value: dict[str, Any]) -> None:
+        """Groq treats integer and number branches in one union as ambiguous."""
+        branches = value.get("anyOf")
+        if not isinstance(branches, list):
+            return
+        branch_types = {branch.get("type") for branch in branches if isinstance(branch, dict)}
+        if {"integer", "number"}.issubset(branch_types):
+            value["anyOf"] = [branch for branch in branches if branch.get("type") != "integer"]
+
     def normalize(value: Any) -> None:
         if isinstance(value, dict):
             value.pop("default", None)
             value.pop("title", None)
+            collapse_nullable(value)
+            remove_ambiguous_integer_branch(value)
             properties = value.get("properties")
             if isinstance(properties, dict):
                 value["required"] = list(properties)
