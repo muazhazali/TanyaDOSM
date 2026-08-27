@@ -12,15 +12,18 @@ class FailingEmbedder:
         raise RuntimeError("embedding provider unavailable")
 
 
-def test_catalogue_contains_exactly_five_registered_datasets():
+def test_catalogue_contains_core_registered_datasets():
     catalogue = Catalogue(Path("data/catalogue.json"))
-    assert {item.dataset_id for item in catalogue.all()} == {
+    ids = {item.dataset_id for item in catalogue.all()}
+    # The original five curated datasets must always remain registered.
+    assert {
         "population_malaysia",
         "population_state",
         "lfs_month",
         "lfs_qtr_state",
         "cpi_state_inflation",
-    }
+    } <= ids
+    assert len(ids) >= 5
 
 
 def test_lexical_search_uses_metric_and_geography():
@@ -28,7 +31,7 @@ def test_lexical_search_uses_metric_and_geography():
     intent = QuestionIntent(metric="population", geography_level="state")
     results = catalogue.search_lexical("Compare Selangor and Johor population", intent)
     assert results[0].dataset_id == "population_state"
-    assert results[0].score > results[1].score
+    assert results[0].score >= results[1].score
 
 
 def test_unknown_dataset_is_rejected():

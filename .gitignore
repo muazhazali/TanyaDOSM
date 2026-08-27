@@ -12,3 +12,8 @@ frontend/dist/
 frontend/playwright-report/
 frontend/test-results/
 frontend/.cache/
+
+# Catalogue crawler/scratch state (reviewed discoveries go into catalogue.json)
+data/*.bak
+data/catalogue_candidates.json
+data/catalogue_entries_auto*.json
