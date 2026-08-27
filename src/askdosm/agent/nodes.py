@@ -141,20 +141,14 @@ def build_query_plan(state: AgentState, services: NodeServices) -> dict:
     plan = planner.invoke([("system", PLAN_SYSTEM), ("human", json.dumps(context))])
     if plan.dataset_id != definition.dataset_id:
         raise ValueError("Planner returned an unregistered or different dataset ID")
-    if state["intent"].latest:
-        # "latest" is an instruction, not a date value. Resolve it after all
-        # ordinary filters have run so planner output such as date = "latest"
-        # never reaches pandas' timestamp parser.
-        filters = [
-            item
-            for item in plan.filters
-            if not (
-                item.column == "date"
-                and isinstance(item.value, str)
-                and item.value.casefold() in {"latest", "current", "most recent"}
-            )
-        ]
-        plan = plan.model_copy(update={"filters": filters})
+    filters = []
+    for item in plan.filters:
+        if item.column == "date" and isinstance(item.value, str):
+            raw = item.value.casefold()
+            if raw in {"latest", "current", "most recent", "latest-01-01", "latest_quarter_date"}:
+                continue
+        filters.append(item)
+    plan = plan.model_copy(update={"filters": filters})
     return {"query_plan": plan}
 
 

@@ -1,0 +1,452 @@
+[
+  {
+    "id": "Q01",
+    "question": "What is Malaysia's population in 2025?",
+    "expected": "population_malaysia",
+    "selected": null,
+    "status": "error:ValueError",
+    "elapsed": 5.233736600000157,
+    "correct": false
+  },
+  {
+    "id": "Q02",
+    "question": "What is Malaysia's latest population?",
+    "expected": "population_malaysia",
+    "selected": "population_malaysia",
+    "status": "complete",
+    "elapsed": 1.6150692000001072,
+    "correct": true
+  },
+  {
+    "id": "Q03",
+    "question": "Show Malaysia's population from 2015 to 2025.",
+    "expected": "population_malaysia",
+    "selected": "population_malaysia",
+    "status": "complete",
+    "elapsed": 1.62734619999992,
+    "correct": true
+  },
+  {
+    "id": "Q04",
+    "question": "How much did Malaysia's population grow from 2020 to 2025?",
+    "expected": "population_malaysia",
+    "selected": "population_malaysia",
+    "status": "complete",
+    "elapsed": 1.8100207000006776,
+    "correct": true
+  },
+  {
+    "id": "Q05",
+    "question": "What was the percentage growth in Malaysia's population between 2010 and 2020?",
+    "expected": "population_malaysia",
+    "selected": "population_malaysia",
+    "status": "complete",
+    "elapsed": 8.79172059999928,
+    "correct": true
+  },
+  {
+    "id": "Q06",
+    "question": "Berapa jumlah penduduk Malaysia pada tahun 2025?",
+    "expected": "population_malaysia",
+    "selected": null,
+    "status": "error:ValueError",
+    "elapsed": 1.740708000000268,
+    "correct": false
+  },
+  {
+    "id": "Q07",
+    "question": "Tunjukkan trend populasi Malaysia sejak 2020.",
+    "expected": "population_malaysia",
+    "selected": "population_malaysia",
+    "status": "complete",
+    "elapsed": 1.6768192999998064,
+    "correct": true
+  },
+  {
+    "id": "Q08",
+    "question": "Berapakah pertambahan penduduk Malaysia dari 2015 hingga 2025?",
+    "expected": "population_malaysia",
+    "selected": "population_malaysia",
+    "status": "complete",
+    "elapsed": 1.4356011999998373,
+    "correct": true
+  },
+  {
+    "id": "Q09",
+    "question": "What was the lowest national population between 2000 and 2010?",
+    "expected": "population_malaysia",
+    "selected": "population_malaysia",
+    "status": "complete",
+    "elapsed": 1.6856752000003326,
+    "correct": true
+  },
+  {
+    "id": "Q10",
+    "question": "Give me Malaysia's population CAGR from 2015 to 2025.",
+    "expected": "population_malaysia",
+    "selected": "population_malaysia",
+    "status": "complete",
+    "elapsed": 1.5671284999998534,
+    "correct": true
+  },
+  {
+    "id": "Q11",
+    "question": "What was Selangor's population in 2025?",
+    "expected": "population_state",
+    "selected": "population_state",
+    "status": "complete",
+    "elapsed": 1.3516257999999652,
+    "correct": true
+  },
+  {
+    "id": "Q12",
+    "question": "Compare Johor and Selangor population in 2025.",
+    "expected": "population_state",
+    "selected": null,
+    "status": "failed",
+    "elapsed": 1.1708142999996198,
+    "correct": false
+  },
+  {
+    "id": "Q13",
+    "question": "Rank Malaysian states by population in 2025.",
+    "expected": "population_state",
+    "selected": "population_state",
+    "status": "complete",
+    "elapsed": 1.6189956999996866,
+    "correct": true
+  },
+  {
+    "id": "Q14",
+    "question": "Which five states had the largest population in 2024?",
+    "expected": "population_state",
+    "selected": "population_state",
+    "status": "complete",
+    "elapsed": 8.63487619999978,
+    "correct": true
+  },
+  {
+    "id": "Q15",
+    "question": "Show Penang's population trend since 2015.",
+    "expected": "population_state",
+    "selected": "population_state",
+    "status": "complete",
+    "elapsed": 1.6234083999997893,
+    "correct": true
+  },
+  {
+    "id": "Q16",
+    "question": "What percentage did Johor's population grow from 2020 to 2025?",
+    "expected": "population_state",
+    "selected": "population_state",
+    "status": "complete",
+    "elapsed": 2.290627699999277,
+    "correct": true
+  },
+  {
+    "id": "Q17",
+    "question": "Negeri mana mempunyai penduduk paling ramai pada tahun 2025?",
+    "expected": "population_state",
+    "selected": "population_state",
+    "status": "complete",
+    "elapsed": 2.36560290000034,
+    "correct": true
+  },
+  {
+    "id": "Q18",
+    "question": "Bandingkan populasi Sabah dan Sarawak pada 2024.",
+    "expected": "population_state",
+    "selected": null,
+    "status": "failed",
+    "elapsed": 0.932787499999904,
+    "correct": false
+  },
+  {
+    "id": "Q19",
+    "question": "Tunjukkan jumlah penduduk Pulau Pinang dari 2020 hingga 2025.",
+    "expected": "population_state",
+    "selected": "population_state",
+    "status": "complete",
+    "elapsed": 1.9266073999997388,
+    "correct": true
+  },
+  {
+    "id": "Q20",
+    "question": "Which state had the smallest population in 2023?",
+    "expected": "population_state",
+    "selected": "population_state",
+    "status": "complete",
+    "elapsed": 1.6636263000000326,
+    "correct": true
+  },
+  {
+    "id": "Q21",
+    "question": "What was Malaysia's unemployment rate in June 2025?",
+    "expected": "lfs_month",
+    "selected": "lfs_month_youth",
+    "status": "complete",
+    "elapsed": 7.21642730000076,
+    "correct": false
+  },
+  {
+    "id": "Q22",
+    "question": "Show Malaysia's monthly unemployment rate since January 2024.",
+    "expected": "lfs_month",
+    "selected": "lfs_month_youth",
+    "status": "complete",
+    "elapsed": 2.1621430000004693,
+    "correct": false
+  },
+  {
+    "id": "Q23",
+    "question": "What is the latest national labour force size?",
+    "expected": "lfs_month",
+    "selected": "lfs_month",
+    "status": "complete",
+    "elapsed": 1.943691100000251,
+    "correct": true
+  },
+  {
+    "id": "Q24",
+    "question": "Calculate the average unemployment rate in 2024.",
+    "expected": "lfs_month",
+    "selected": "lfs_month_youth",
+    "status": "complete",
+    "elapsed": 2.042245300000104,
+    "correct": false
+  },
+  {
+    "id": "Q25",
+    "question": "What was the maximum participation rate from 2020 to 2024?",
+    "expected": "lfs_month",
+    "selected": null,
+    "status": "failed",
+    "elapsed": 1.05478149999999,
+    "correct": false
+  },
+  {
+    "id": "Q26",
+    "question": "Berapa kadar pengangguran Malaysia yang terkini?",
+    "expected": "lfs_month",
+    "selected": null,
+    "status": "error:ValueError",
+    "elapsed": 1.5921778000001723,
+    "correct": false
+  },
+  {
+    "id": "Q27",
+    "question": "Tunjukkan trend pengangguran bulanan Malaysia sejak 2023.",
+    "expected": "lfs_month",
+    "selected": "lfs_month_youth",
+    "status": "complete",
+    "elapsed": 1.5902602999994997,
+    "correct": false
+  },
+  {
+    "id": "Q28",
+    "question": "Berapakah purata kadar penyertaan tenaga buruh pada 2024?",
+    "expected": "lfs_month",
+    "selected": "lfs_month",
+    "status": "complete",
+    "elapsed": 2.740584099999978,
+    "correct": true
+  },
+  {
+    "id": "Q29",
+    "question": "Compare the national unemployment rate in January and December 2024.",
+    "expected": "lfs_month",
+    "selected": null,
+    "status": "failed",
+    "elapsed": 0.9448601000003691,
+    "correct": false
+  },
+  {
+    "id": "Q30",
+    "question": "How many unemployed people were recorded in the latest month?",
+    "expected": "lfs_month",
+    "selected": "lfs_month_youth",
+    "status": "complete",
+    "elapsed": 1.8983146999999008,
+    "correct": false
+  },
+  {
+    "id": "Q31",
+    "question": "Compare Johor and Selangor unemployment rates in 2025.",
+    "expected": "lfs_qtr_state",
+    "selected": "lfs_qtr_state",
+    "status": "complete",
+    "elapsed": 2.201806099999885,
+    "correct": true
+  },
+  {
+    "id": "Q32",
+    "question": "Show Penang's quarterly unemployment trend since 2020.",
+    "expected": "lfs_qtr_state",
+    "selected": "lfs_qtr_state",
+    "status": "complete",
+    "elapsed": 1.7221523999996862,
+    "correct": true
+  },
+  {
+    "id": "Q33",
+    "question": "Which state has the highest latest unemployment rate?",
+    "expected": "lfs_qtr_state",
+    "selected": "lfs_qtr_state",
+    "status": "complete",
+    "elapsed": 1.5193944000002375,
+    "correct": true
+  },
+  {
+    "id": "Q34",
+    "question": "Rank states by labour force size for the latest quarter.",
+    "expected": "lfs_qtr_state",
+    "selected": "lfs_qtr_state",
+    "status": "complete",
+    "elapsed": 9.058934900000168,
+    "correct": true
+  },
+  {
+    "id": "Q35",
+    "question": "What was Sabah's participation rate in the first quarter of 2024?",
+    "expected": "lfs_qtr_state",
+    "selected": "lfs_qtr_state",
+    "status": "complete",
+    "elapsed": 1.6235957999997481,
+    "correct": true
+  },
+  {
+    "id": "Q36",
+    "question": "Bandingkan kadar pengangguran Johor dan Selangor sejak 2020.",
+    "expected": "lfs_qtr_state",
+    "selected": "lfs_qtr_state",
+    "status": "complete",
+    "elapsed": 1.9500357999995686,
+    "correct": true
+  },
+  {
+    "id": "Q37",
+    "question": "Negeri mana mempunyai kadar pengangguran tertinggi pada suku terkini?",
+    "expected": "lfs_qtr_state",
+    "selected": "lfs_qtr_state",
+    "status": "complete",
+    "elapsed": 2.7055731999998898,
+    "correct": true
+  },
+  {
+    "id": "Q38",
+    "question": "Tunjukkan trend tenaga buruh Sabah setiap suku tahun.",
+    "expected": "lfs_qtr_state",
+    "selected": "lfs_qtr_state",
+    "status": "complete",
+    "elapsed": 1.9079263000003266,
+    "correct": true
+  },
+  {
+    "id": "Q39",
+    "question": "What is the latest unemployment rate in Sarawak?",
+    "expected": "lfs_qtr_state",
+    "selected": "lfs_qtr_state",
+    "status": "complete",
+    "elapsed": 1.8672770000002856,
+    "correct": true
+  },
+  {
+    "id": "Q40",
+    "question": "What was the average unemployment rate in Johor during 2024?",
+    "expected": "lfs_qtr_state",
+    "selected": "lfs_qtr_state",
+    "status": "complete",
+    "elapsed": 1.858626600000207,
+    "correct": true
+  },
+  {
+    "id": "Q41",
+    "question": "What is Selangor's latest year-on-year inflation rate?",
+    "expected": "cpi_state_inflation",
+    "selected": "cpi_state_inflation",
+    "status": "complete",
+    "elapsed": 1.8382524999997258,
+    "correct": true
+  },
+  {
+    "id": "Q42",
+    "question": "Compare inflation in Johor and Penang during 2025.",
+    "expected": "cpi_state_inflation",
+    "selected": null,
+    "status": "failed",
+    "elapsed": 1.2447850000007747,
+    "correct": false
+  },
+  {
+    "id": "Q43",
+    "question": "Show Sabah's inflation trend since 2022.",
+    "expected": "cpi_state_inflation",
+    "selected": "cpi_state_inflation",
+    "status": "complete",
+    "elapsed": 8.064732000000731,
+    "correct": true
+  },
+  {
+    "id": "Q44",
+    "question": "Which state had the highest inflation in December 2024?",
+    "expected": "cpi_state_inflation",
+    "selected": "cpi_state_inflation",
+    "status": "complete",
+    "elapsed": 3.0443725000004633,
+    "correct": true
+  },
+  {
+    "id": "Q45",
+    "question": "Calculate average inflation in Selangor during 2024.",
+    "expected": "cpi_state_inflation",
+    "selected": "cpi_state_inflation",
+    "status": "complete",
+    "elapsed": 2.6130911000000197,
+    "correct": true
+  },
+  {
+    "id": "Q46",
+    "question": "Berapakah kadar inflasi terkini di Johor?",
+    "expected": "cpi_state_inflation",
+    "selected": "cpi_state_inflation",
+    "status": "complete",
+    "elapsed": 1.7749046999997518,
+    "correct": true
+  },
+  {
+    "id": "Q47",
+    "question": "Bandingkan inflasi Sabah dan Sarawak pada 2025.",
+    "expected": "cpi_state_inflation",
+    "selected": null,
+    "status": "failed",
+    "elapsed": 0.9839793000001009,
+    "correct": false
+  },
+  {
+    "id": "Q48",
+    "question": "Tunjukkan trend inflasi Pulau Pinang sejak 2020.",
+    "expected": "cpi_state_inflation",
+    "selected": "cpi_state_inflation",
+    "status": "complete",
+    "elapsed": 1.640860600000451,
+    "correct": true
+  },
+  {
+    "id": "Q49",
+    "question": "Compare population growth and unemployment across states.",
+    "expected": null,
+    "selected": null,
+    "status": "failed",
+    "elapsed": 1.1839527000001908,
+    "correct": true
+  },
+  {
+    "id": "Q50",
+    "question": "Forecast Malaysia's GDP for the next five years.",
+    "expected": null,
+    "selected": null,
+    "status": "error:HostedProviderError",
+    "elapsed": 0.6459599999998318,
+    "correct": false
+  }
+]

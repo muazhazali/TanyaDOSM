@@ -6,7 +6,14 @@
     "domain": "demography",
     "aliases": [
       "population malaysia",
-      "population table: malaysia"
+      "population table: malaysia",
+      "national population",
+      "malaysia population",
+      "penduduk malaysia",
+      "jumlah penduduk malaysia",
+      "populasi malaysia",
+      "bilangan penduduk malaysia",
+      "demographics malaysia"
     ],
     "dimensions": [
       "date",
@@ -18,7 +25,14 @@
       {
         "name": "population",
         "aliases": [
-          "population"
+          "population",
+          "penduduk",
+          "populasi",
+          "bilangan penduduk",
+          "jumlah penduduk",
+          "people",
+          "population size",
+          "total population"
         ],
         "unit": "thousand people"
       }
@@ -49,7 +63,19 @@
     "domain": "demography",
     "aliases": [
       "population state",
-      "population table: states"
+      "population table: states",
+      "state population",
+      "population by state",
+      "penduduk negeri",
+      "penduduk mengikut negeri",
+      "populasi negeri",
+      "bilangan penduduk negeri",
+      "state demographics",
+      "population selangor",
+      "population johor",
+      "population sabah",
+      "population sarawak",
+      "population penang"
     ],
     "dimensions": [
       "date",
@@ -62,7 +88,14 @@
       {
         "name": "population",
         "aliases": [
-          "population"
+          "population",
+          "penduduk",
+          "populasi",
+          "bilangan penduduk",
+          "jumlah penduduk",
+          "people",
+          "population size",
+          "total population"
         ],
         "unit": "thousand people"
       }
@@ -3393,11 +3426,24 @@
   {
     "dataset_id": "lfs_month",
     "title": "Monthly Principal Labour Force Statistics",
-    "description": "Monthly principal labour force statistics, including unemployment and participation rates.",
+    "description": "Monthly principal labour force statistics, including unemployment and participation rates. This is the canonical national labour force dataset for general unemployment questions.",
     "domain": "labour markets",
     "aliases": [
       "lfs month",
-      "monthly principal labour force statistics"
+      "monthly principal labour force statistics",
+      "monthly unemployment",
+      "monthly unemployment rate",
+      "national unemployment",
+      "national unemployment rate",
+      "unemployment rate malaysia",
+      "unemployment malaysia",
+      "labour force malaysia",
+      "labor force malaysia",
+      "kadar pengangguran bulanan",
+      "pengangguran bulanan malaysia",
+      "tenaga buruh bulanan malaysia",
+      "statistik tenaga buruh bulanan",
+      "kadar penyertaan bulanan"
     ],
     "dimensions": [
       "date",
@@ -3407,7 +3453,12 @@
       {
         "name": "lf",
         "aliases": [
-          "lf"
+          "lf",
+          "labour force",
+          "labor force",
+          "tenaga buruh",
+          "size of labour force",
+          "total labour force"
         ],
         "unit": "thousand people"
       },
@@ -3415,7 +3466,13 @@
         "name": "lf_employed",
         "aliases": [
           "lf_employed",
-          "lf employed"
+          "lf employed",
+          "employed",
+          "employed persons",
+          "number employed",
+          "pekerja",
+          "bilangan pekerja",
+          "yang bekerja"
         ],
         "unit": "thousand people"
       },
@@ -3423,7 +3480,14 @@
         "name": "lf_unemployed",
         "aliases": [
           "lf_unemployed",
-          "lf unemployed"
+          "lf unemployed",
+          "unemployed",
+          "unemployed persons",
+          "number unemployed",
+          "unemployed people",
+          "penganggur",
+          "bilangan penganggur",
+          "yang menganggur"
         ],
         "unit": "thousand people"
       },
@@ -3431,7 +3495,12 @@
         "name": "lf_outside",
         "aliases": [
           "lf_outside",
-          "lf outside"
+          "lf outside",
+          "outside labour force",
+          "persons outside labour force",
+          "outside the labour force",
+          "di luar tenaga buruh",
+          "luar tenaga buruh"
         ],
         "unit": "count"
       },
@@ -3439,7 +3508,12 @@
         "name": "p_rate",
         "aliases": [
           "p_rate",
-          "p rate"
+          "p rate",
+          "participation rate",
+          "labour force participation rate",
+          "lfpr",
+          "kadar penyertaan",
+          "kadar penyertaan tenaga buruh"
         ],
         "unit": "percent"
       },
@@ -3447,7 +3521,10 @@
         "name": "ep_ratio",
         "aliases": [
           "ep_ratio",
-          "ep ratio"
+          "ep ratio",
+          "employment to population ratio",
+          "employment-population ratio",
+          "nisbah pekerjaan"
         ],
         "unit": "percent"
       }
@@ -3692,12 +3769,18 @@
   },
   {
     "dataset_id": "lfs_month_youth",
-    "title": "Monthly Youth Unemployment",
-    "description": "Monthly unemployment statistics focusing on the 15-30 age group.",
+    "title": "Monthly Youth Unemployment (Ages 15-30)",
+    "description": "Monthly unemployment statistics focusing on the 15-30 age group. Use only when the question explicitly references youth, young people, or the 15-30 age bracket. For general national unemployment, use lfs_month instead.",
     "domain": "labour markets",
     "aliases": [
       "lfs month youth",
-      "monthly youth unemployment"
+      "monthly youth unemployment",
+      "youth unemployment",
+      "young unemployed",
+      "unemployment 15 24",
+      "unemployment 15 30",
+      "pengangguran belia",
+      "pengangguran muda"
     ],
     "dimensions": [
       "date"
@@ -3994,7 +4077,21 @@
     "domain": "labour markets",
     "aliases": [
       "lfs qtr state",
-      "quarterly principal labour force statistics by state"
+      "quarterly principal labour force statistics by state",
+      "state unemployment rate quarterly",
+      "quarterly unemployment by state",
+      "unemployment rate by state",
+      "labour force by state",
+      "state labour force quarterly",
+      "kadar pengangguran negeri suku tahunan",
+      "pengangguran negeri setiap suku tahun",
+      "tenaga buruh negeri suku tahunan",
+      "kadar penyertaan negeri suku tahunan",
+      "unemployment selangor",
+      "unemployment johor",
+      "unemployment sabah",
+      "unemployment sarawak",
+      "unemployment penang"
     ],
     "dimensions": [
       "date",
@@ -4004,7 +4101,12 @@
       {
         "name": "lf",
         "aliases": [
-          "lf"
+          "lf",
+          "labour force",
+          "labor force",
+          "tenaga buruh",
+          "size of labour force",
+          "total labour force"
         ],
         "unit": "thousand people"
       },
@@ -4012,7 +4114,13 @@
         "name": "lf_employed",
         "aliases": [
           "lf_employed",
-          "lf employed"
+          "lf employed",
+          "employed",
+          "employed persons",
+          "number employed",
+          "pekerja",
+          "bilangan pekerja",
+          "yang bekerja"
         ],
         "unit": "thousand people"
       },
@@ -4020,7 +4128,14 @@
         "name": "lf_unemployed",
         "aliases": [
           "lf_unemployed",
-          "lf unemployed"
+          "lf unemployed",
+          "unemployed",
+          "unemployed persons",
+          "number unemployed",
+          "unemployed people",
+          "penganggur",
+          "bilangan penganggur",
+          "yang menganggur"
         ],
         "unit": "thousand people"
       },
@@ -4028,7 +4143,12 @@
         "name": "lf_outside",
         "aliases": [
           "lf_outside",
-          "lf outside"
+          "lf outside",
+          "outside labour force",
+          "persons outside labour force",
+          "outside the labour force",
+          "di luar tenaga buruh",
+          "luar tenaga buruh"
         ],
         "unit": "count"
       },
@@ -4036,7 +4156,12 @@
         "name": "p_rate",
         "aliases": [
           "p_rate",
-          "p rate"
+          "p rate",
+          "participation rate",
+          "labour force participation rate",
+          "lfpr",
+          "kadar penyertaan",
+          "kadar penyertaan tenaga buruh"
         ],
         "unit": "percent"
       },
@@ -4044,7 +4169,11 @@
         "name": "u_rate",
         "aliases": [
           "u_rate",
-          "u rate"
+          "u rate",
+          "unemployment rate",
+          "jobless rate",
+          "kadar pengangguran",
+          "kadar pengangguran negeri"
         ],
         "unit": "percent"
       }
@@ -4961,7 +5090,23 @@
     "domain": "prices",
     "aliases": [
       "cpi state inflation",
-      "monthly cpi inflation by state & division (2-digit)"
+      "monthly cpi inflation by state & division (2-digit)",
+      "state inflation rate",
+      "inflation by state",
+      "state-level inflation",
+      "cpi inflation by state",
+      "year-on-year inflation by state",
+      "kadar inflasi negeri",
+      "inflasi negeri",
+      "inflasi mengikut negeri",
+      "kadar inflasi mengikut negeri",
+      "indeks harga pengguna negeri",
+      "ihk negeri",
+      "inflation selangor",
+      "inflation johor",
+      "inflation sabah",
+      "inflation sarawak",
+      "inflation penang"
     ],
     "dimensions": [
       "date",
@@ -4973,7 +5118,16 @@
         "name": "inflation_yoy",
         "aliases": [
           "inflation_yoy",
-          "inflation yoy"
+          "inflation yoy",
+          "inflation",
+          "inflation rate",
+          "year-on-year inflation",
+          "year over year inflation",
+          "yoy inflation",
+          "annual inflation",
+          "kadar inflasi",
+          "inflasi tahunan",
+          "inflasi yoy"
         ],
         "unit": "percent"
       },
@@ -4981,7 +5135,13 @@
         "name": "inflation_mom",
         "aliases": [
           "inflation_mom",
-          "inflation mom"
+          "inflation mom",
+          "month-on-month inflation",
+          "month over month inflation",
+          "mom inflation",
+          "monthly inflation",
+          "inflasi bulanan",
+          "inflasi mom"
         ],
         "unit": "percent"
       }

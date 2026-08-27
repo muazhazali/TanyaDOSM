@@ -24,7 +24,40 @@ in columns. Represent dates as ISO dates. For a year range, use gte YYYY-01-01 a
 For a single annual year, use eq YYYY-01-01. Do not override default category filters unless the
 user explicitly asks for a breakdown. Use state filters for named states. Never emit SQL or code.
 For rankings, sort desc unless the question asks for smallest. Limit only when a top/bottom count
-was requested."""
+was requested. For a comparison of two or more named entities on the same column, use the "in"
+operator with the list of entity names as the filter value. Never invent column names: every
+column, metric, and filter column must exactly match one of the supplied dimensions or measures.
+If the metric name in the intent does not match a supplied measure name, choose the closest
+supplied measure name instead of using the intent's wording.
+
+Examples:
+- "What was Selangor's population in 2025?" with default_filters {sex: both, age: overall,
+  ethnicity: overall}, metric=population, frequency=annual =>
+  columns=[date, state, population], metric=population, operation=lookup,
+  filters=[{column: state, operator: eq, value: "Selangor"},
+           {column: date, operator: eq, value: "2025-01-01"}],
+  group_by=[], sort=null, limit=null.
+  Note: default_filters for sex/age/ethnicity are applied automatically; do not restate them.
+- "Rank states by population in 2025" with default_filters {sex: both, age: overall,
+  ethnicity: overall}, metric=population, frequency=annual =>
+  columns=[state, population], metric=population, operation=ranking,
+  filters=[{column: date, operator: eq, value: "2025-01-01"}],
+  group_by=[state], sort="desc", limit=null.
+- "Show Malaysia's monthly unemployment rate from 2020 to 2024" with metric=u_rate,
+  frequency=monthly =>
+  columns=[date, u_rate], metric=u_rate, operation=trend,
+  filters=[{column: date, operator: gte, value: "2020-01-01"},
+           {column: date, operator: lte, value: "2024-12-31"}],
+  group_by=[], sort="asc", limit=null.
+- "Compare Johor and Selangor population in 2025" with default_filters {sex: both, age: overall,
+  ethnicity: overall}, metric=population, frequency=annual =>
+  columns=[state, population], metric=population, operation=compare,
+  filters=[{column: state, operator: in, value: ["Johor", "Selangor"]},
+           {column: date, operator: eq, value: "2025-01-01"}],
+  group_by=[state], sort=null, limit=null.
+  Note: a comparison of two entities uses operator "in" with both names; never two separate
+  eq filters for the same column.
+"""
 
 CONTEXT_SYSTEM = """Rewrite the latest user message as one self-contained question about official
 Malaysian statistics. Use the supplied previous user questions and verified assistant answers only
