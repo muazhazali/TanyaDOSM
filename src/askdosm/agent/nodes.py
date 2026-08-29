@@ -14,6 +14,7 @@ from askdosm.agent.state import AgentState
 from askdosm.analysis import analyze
 from askdosm.catalogue import Catalogue, Embedder
 from askdosm.data import DatasetCache, execute_plan, resolve_latest
+from askdosm.followups import generate_follow_ups
 from askdosm.models import (
     AnswerPayload,
     ExecutionTrace,
@@ -276,8 +277,16 @@ def generate_response(state: AgentState, services: NodeServices) -> dict:
         intent=state["intent"], selection_reason=state.get("selection_reason"), query_plan=state["query_plan"],
         calculation=result.calculation, rows_used=result.row_count, validation=state["validation"], retry_count=state.get("retry_count", 0)
     )
+    follow_ups = generate_follow_ups(
+        dataset=definition, intent=state["intent"], plan=state["query_plan"], result=result,
+    )
     payload = AnswerPayload(
-        answer=answer_text, table_rows=result.rows, visualization=state["visualization"], source=source, trace=trace
+        answer=answer_text,
+        table_rows=result.rows,
+        visualization=state["visualization"],
+        source=source,
+        trace=trace,
+        follow_ups=follow_ups,
     )
     return {"answer": payload, "final_status": "complete"}
 

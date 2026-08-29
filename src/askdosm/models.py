@@ -182,6 +182,7 @@ class AnswerPayload(BaseModel):
     source: SourceReference | None = None
     trace: ExecutionTrace = Field(default_factory=ExecutionTrace)
     error: str | None = None
+    follow_ups: list[str] = Field(default_factory=list)
 class ContextResolution(BaseModel):
     """A standalone question reconstructed from bounded conversation context."""
 

@@ -23,6 +23,7 @@ export interface AnswerPayload {
   } | null
   trace: Record<string, unknown>
   error?: string | null
+  follow_ups?: string[]
 }
 
 export interface RunSummary {

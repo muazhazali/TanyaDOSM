@@ -132,7 +132,7 @@ function Results({ answer, runId, question, onFollowUp }: { answer: AnswerPayloa
       <button disabled={feedback !== null} aria-label="This answer was useful" onClick={() => sendFeedback(true)} className={`icon-button ${feedback === true ? 'bg-emerald-100 text-emerald-700' : ''}`}><ThumbsUp size={16} /></button>
       <button disabled={feedback !== null} aria-label="This answer was not useful" onClick={() => sendFeedback(false)} className={`icon-button ${feedback === false ? 'bg-amber-100 text-amber-700' : ''}`}><ThumbsDown size={16} /></button>
     </div>}
-    {onFollowUp && !answer.error && <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Continue exploring</p><div className="mt-2 flex flex-wrap gap-2"><button onClick={() => onFollowUp('Show this as a trend over time.')} className="action-button">Show the trend</button><button onClick={() => onFollowUp('Compare this with another state.')} className="action-button">Compare another state</button></div></div>}
+    {onFollowUp && !answer.error && <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Continue exploring</p><div className="mt-2 flex flex-wrap gap-2">{(answer.follow_ups ?? ['Show this as a trend over time.', 'Compare this with another state.']).map((s) => <button key={s} onClick={() => onFollowUp(s)} className="action-button">{s}</button>)}</div></div>}
     <p className="sr-only">Question answered: {question}</p>
   </section>
 }
