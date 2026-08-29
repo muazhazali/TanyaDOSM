@@ -112,12 +112,52 @@ def test_health_reports_hosted_providers(tmp_path, monkeypatch):
         response = client.get("/api/health")
 
     assert response.json() == {
-        "status": "degraded",
+        "status": "ready",
         "database": "ready",
         "catalogue": "ready",
         "llm": "ready",
         "embeddings": "unavailable",
     }
+
+
+def test_conversation_management_and_feedback(tmp_path):
+    app = create_app(api_settings(tmp_path), service_factory=FakeService)
+    with TestClient(app) as client:
+        created = client.post("/api/runs", json={"question": "Latest population?"}).json()
+        for _ in range(100):
+            snapshot = client.get(f"/api/runs/{created['id']}").json()
+            if snapshot["status"] == "completed":
+                break
+            asyncio.run(asyncio.sleep(0.01))
+
+        renamed = client.patch(
+            f"/api/conversations/{created['conversation_id']}", json={"title": "Population notes"}
+        )
+        feedback = client.post(
+            f"/api/runs/{created['id']}/feedback", json={"helpful": True}
+        )
+        deleted = client.delete(f"/api/conversations/{created['conversation_id']}")
+
+    assert renamed.status_code == 200
+    assert renamed.json()["title"] == "Population notes"
+    assert feedback.status_code == 204
+    assert deleted.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_manager_cancels_a_queued_run(tmp_path):
+    from askdosm.api.manager import RunManager
+
+    store = RunStore(tmp_path / "runs.sqlite3")
+    await store.initialize()
+    manager = RunManager(store, FakeService)
+    snapshot = await manager.create("Latest population?")
+
+    assert manager.queue_position(snapshot.id) == 1
+    assert await manager.cancel(snapshot.id) is True
+    cancelled = await store.get_run(snapshot.id)
+    assert cancelled is not None
+    assert cancelled.status == RunStatus.INTERRUPTED
 
 
 def test_default_app_rejects_missing_groq_key_at_startup(tmp_path):

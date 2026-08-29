@@ -17,8 +17,9 @@ from fastapi.staticfiles import StaticFiles
 from askdosm.agent import TanyaDOSMService
 from askdosm.api.manager import RunManager
 from askdosm.api.models import (
-    ConversationSnapshot, ConversationSummary, HealthStatus, RunCreateRequest,
-    RunSnapshot, RunSummary, TERMINAL_STATUSES,
+    ConversationSnapshot, ConversationSummary, ConversationUpdateRequest,
+    FeedbackRequest, HealthStatus, RunCreateRequest, RunSnapshot, RunSummary,
+    TERMINAL_STATUSES,
 )
 from askdosm.api.store import RunStore
 from askdosm.catalogue import Catalogue
@@ -78,7 +79,7 @@ def create_app(settings: Settings | None = None, service_factory=None) -> FastAP
         CORSMiddleware,
         allow_origins=config.cors_origin_list,
         allow_credentials=False,
-        allow_methods=["GET", "POST", "DELETE"],
+        allow_methods=["GET", "POST", "PATCH", "DELETE"],
         allow_headers=["Content-Type", "Last-Event-ID"],
     )
 
@@ -104,7 +105,7 @@ def create_app(settings: Settings | None = None, service_factory=None) -> FastAP
                 )
         llm_status = str(health_cache["llm"])
         embedding_status = str(health_cache["embeddings"])
-        overall = "ready" if catalogue_status == llm_status == embedding_status == "ready" else "degraded"
+        overall = "ready" if catalogue_status == llm_status == "ready" else "degraded"
         return HealthStatus(
             status=overall,
             database="ready",
@@ -133,7 +134,8 @@ def create_app(settings: Settings | None = None, service_factory=None) -> FastAP
         if len(body.question) > config.max_question_length:
             raise HTTPException(status_code=422, detail="Question is too long")
         try:
-            return await manager.create(body.question, body.conversation_id)
+            snapshot = await manager.create(body.question, body.conversation_id)
+            return snapshot.model_copy(update={"queue_position": manager.queue_position(snapshot.id)})
         except KeyError:
             raise HTTPException(status_code=404, detail="Conversation not found") from None
 
@@ -148,6 +150,26 @@ def create_app(settings: Settings | None = None, service_factory=None) -> FastAP
             raise HTTPException(status_code=404, detail="Conversation not found")
         return conversation
 
+    @app.patch("/api/conversations/{conversation_id}", response_model=ConversationSnapshot)
+    async def rename_conversation(
+        conversation_id: str, body: ConversationUpdateRequest
+    ) -> ConversationSnapshot:
+        if not await store.rename_conversation(conversation_id, body.title):
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        conversation = await store.get_conversation(conversation_id)
+        assert conversation is not None
+        return conversation
+
+    @app.delete("/api/conversations/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
+    async def delete_conversation(conversation_id: str):
+        try:
+            deleted = await store.delete_conversation(conversation_id)
+        except RuntimeError:
+            raise HTTPException(status_code=409, detail="Active conversations cannot be deleted") from None
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        return None
+
     @app.get("/api/runs", response_model=list[RunSummary])
     async def list_runs(limit: int = Query(default=20, ge=1, le=100)) -> list[RunSummary]:
         return await store.list_runs(limit)
@@ -157,6 +179,24 @@ def create_app(settings: Settings | None = None, service_factory=None) -> FastAP
         snapshot = await store.get_run(run_id)
         if snapshot is None:
             raise HTTPException(status_code=404, detail="Run not found")
+        return snapshot.model_copy(update={"queue_position": manager.queue_position(run_id)})
+
+    @app.post("/api/runs/{run_id}/feedback", status_code=status.HTTP_204_NO_CONTENT)
+    async def save_feedback(run_id: str, body: FeedbackRequest):
+        if not await store.save_feedback(run_id, body.helpful, body.comment):
+            raise HTTPException(status_code=404, detail="Run not found")
+        return None
+
+    @app.post("/api/runs/{run_id}/cancel", response_model=RunSnapshot)
+    async def cancel_run(run_id: str) -> RunSnapshot:
+        try:
+            cancelled = await manager.cancel(run_id)
+        except RuntimeError:
+            raise HTTPException(status_code=409, detail="Only queued requests can be cancelled") from None
+        if not cancelled:
+            raise HTTPException(status_code=404, detail="Run not found")
+        snapshot = await store.get_run(run_id)
+        assert snapshot is not None
         return snapshot
 
     @app.get("/api/runs/{run_id}/events")

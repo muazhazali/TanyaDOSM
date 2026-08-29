@@ -9,3 +9,12 @@
 
 button, summary, a { transition: color 150ms, background-color 150ms, border-color 150ms, opacity 150ms; }
 button:focus-visible, summary:focus-visible, a:focus-visible, textarea:focus-visible { outline: 3px solid #34d399; outline-offset: 2px; }
+
+button:disabled { cursor: not-allowed; }
+
+@layer components {
+  .action-button { display: inline-flex; align-items: center; gap: 0.375rem; border-radius: 0.75rem; border: 1px solid var(--color-slate-200); padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 600; color: var(--color-slate-700); }
+  .action-button:hover { border-color: var(--color-emerald-400); color: var(--color-emerald-800); }
+  .icon-button { display: inline-flex; border-radius: 0.5rem; padding: 0.5rem; color: var(--color-slate-500); }
+  .icon-button:hover { background: var(--color-slate-100); color: var(--color-slate-900); }
+}

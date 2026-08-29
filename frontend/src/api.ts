@@ -24,12 +24,21 @@ export const api = {
       body: JSON.stringify({ question, conversation_id: conversationId || null }),
     }),
   deleteRun: (id: string) => request<void>(`/api/runs/${id}`, { method: 'DELETE' }),
+  cancelRun: (id: string) => request<RunSnapshot>(`/api/runs/${id}/cancel`, { method: 'POST' }),
+  renameConversation: (id: string, title: string) => request<ConversationSnapshot>(`/api/conversations/${id}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title }),
+  }),
+  deleteConversation: (id: string) => request<void>(`/api/conversations/${id}`, { method: 'DELETE' }),
+  saveFeedback: (id: string, helpful: boolean, comment?: string) => request<void>(`/api/runs/${id}/feedback`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ helpful, comment: comment || null }),
+  }),
 }
 
 export function subscribeToRun(
   id: string,
   onEvent: (event: RunEvent) => void,
   onError: () => void,
+  onOpen?: () => void,
 ): () => void {
   const source = new EventSource(`/api/runs/${id}/events`)
   const receive = (message: MessageEvent<string>) => {
@@ -44,6 +53,7 @@ export function subscribeToRun(
     'validation', 'retry', 'visualization', 'result',
   ]
   eventTypes.forEach((type) => source.addEventListener(type, receive as EventListener))
+  source.onopen = () => onOpen?.()
   source.onerror = onError
   return () => source.close()
 }

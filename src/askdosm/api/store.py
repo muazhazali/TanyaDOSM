@@ -67,6 +67,13 @@ class RunStore:
                     PRIMARY KEY (run_id, sequence),
                     FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE CASCADE
                 );
+                CREATE TABLE IF NOT EXISTS run_feedback (
+                    run_id TEXT PRIMARY KEY,
+                    helpful INTEGER NOT NULL,
+                    comment TEXT,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE CASCADE
+                );
                 CREATE INDEX IF NOT EXISTS idx_runs_updated_at ON runs(updated_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at DESC);
                 """
@@ -290,6 +297,46 @@ class RunStore:
             await db.execute("DELETE FROM conversations WHERE NOT EXISTS (SELECT 1 FROM runs WHERE conversation_id = conversations.id)")
             await db.commit()
             return cursor.rowcount
+
+    async def rename_conversation(self, conversation_id: str, title: str) -> bool:
+        async with aiosqlite.connect(self.path) as db:
+            cursor = await db.execute(
+                "UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?",
+                (title, utcnow().isoformat(), conversation_id),
+            )
+            await db.commit()
+            return cursor.rowcount > 0
+
+    async def delete_conversation(self, conversation_id: str) -> bool:
+        async with aiosqlite.connect(self.path) as db:
+            db.row_factory = aiosqlite.Row
+            rows = await db.execute_fetchall(
+                "SELECT status FROM runs WHERE conversation_id = ?", (conversation_id,)
+            )
+            if not rows:
+                return False
+            if any(RunStatus(row["status"]) not in TERMINAL_STATUSES for row in rows):
+                raise RuntimeError("active")
+            await db.execute("PRAGMA foreign_keys=ON")
+            await db.execute("DELETE FROM runs WHERE conversation_id = ?", (conversation_id,))
+            await db.execute("DELETE FROM conversations WHERE id = ?", (conversation_id,))
+            await db.commit()
+            return True
+
+    async def save_feedback(self, run_id: str, helpful: bool, comment: str | None) -> bool:
+        async with aiosqlite.connect(self.path) as db:
+            cursor = await db.execute("SELECT 1 FROM runs WHERE id = ?", (run_id,))
+            if await cursor.fetchone() is None:
+                return False
+            await db.execute(
+                """INSERT INTO run_feedback (run_id, helpful, comment, created_at)
+                   VALUES (?, ?, ?, ?)
+                   ON CONFLICT(run_id) DO UPDATE SET helpful = excluded.helpful,
+                   comment = excluded.comment, created_at = excluded.created_at""",
+                (run_id, int(helpful), comment or None, utcnow().isoformat()),
+            )
+            await db.commit()
+            return True
 
     async def delete_run(self, run_id: str) -> bool:
         async with aiosqlite.connect(self.path) as db:

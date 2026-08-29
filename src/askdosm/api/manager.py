@@ -22,6 +22,8 @@ class RunManager:
         self._worker: asyncio.Task | None = None
         self._maintenance: asyncio.Task | None = None
         self._service: TanyaDOSMService | None = None
+        self._cancelled: set[str] = set()
+        self._active_run_id: str | None = None
 
     async def start(self) -> None:
         await self.store.initialize()
@@ -48,10 +50,37 @@ class RunManager:
         refreshed = await self.store.get_run(run_id)
         return refreshed or snapshot
 
+    def queue_position(self, run_id: str) -> int | None:
+        if run_id == self._active_run_id:
+            return 0
+        queued = [item for item in list(self.queue._queue) if item not in self._cancelled]
+        try:
+            return queued.index(run_id) + 1
+        except ValueError:
+            return None
+
+    async def cancel(self, run_id: str) -> bool:
+        snapshot = await self.store.get_run(run_id)
+        if snapshot is None:
+            return False
+        if snapshot.status != RunStatus.QUEUED:
+            raise RuntimeError("not_queued")
+        self._cancelled.add(run_id)
+        await self.store.update_status(
+            run_id, RunStatus.INTERRUPTED, error="This request was cancelled before it started."
+        )
+        await self.store.append_event(
+            run_id, {"type": "run.failed", "payload": {"error": "Request cancelled"}}
+        )
+        return True
+
     async def _work(self) -> None:
         while True:
             run_id = await self.queue.get()
             try:
+                if run_id in self._cancelled:
+                    self._cancelled.discard(run_id)
+                    continue
                 await self._execute(run_id)
             finally:
                 self.queue.task_done()
@@ -63,8 +92,9 @@ class RunManager:
 
     async def _execute(self, run_id: str) -> None:
         snapshot = await self.store.get_run(run_id)
-        if snapshot is None:
+        if snapshot is None or snapshot.status != RunStatus.QUEUED:
             return
+        self._active_run_id = run_id
         await self.store.update_status(run_id, RunStatus.RUNNING)
         await self.store.append_event(run_id, {"type": "run.started", "payload": {}})
         loop = asyncio.get_running_loop()
@@ -106,3 +136,5 @@ class RunManager:
             await self.store.append_event(
                 run_id, {"type": "run.failed", "payload": {"error": message}}
             )
+        finally:
+            self._active_run_id = None

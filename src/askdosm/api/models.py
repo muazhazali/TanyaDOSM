@@ -29,6 +29,19 @@ class RunCreateRequest(BaseModel):
     conversation_id: str | None = None
 
 
+class ConversationUpdateRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    title: str = Field(min_length=1, max_length=100)
+
+
+class FeedbackRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    helpful: bool
+    comment: str | None = Field(default=None, max_length=500)
+
+
 class RunEvent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -53,6 +66,7 @@ class RunSummary(BaseModel):
     error: str | None = None
     created_at: datetime
     updated_at: datetime
+    queue_position: int | None = None
 
 
 class RunSnapshot(RunSummary):

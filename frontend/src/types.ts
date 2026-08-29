@@ -35,6 +35,7 @@ export interface RunSummary {
   error?: string | null
   created_at: string
   updated_at: string
+  queue_position?: number | null
 }
 
 export interface ConversationSummary {
