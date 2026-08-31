@@ -153,11 +153,57 @@ def analyze_result(state: AgentState, services: NodeServices) -> dict:
     return {"analysis_result": result}
 
 
+def _detect_date_range_gap(state: AgentState) -> str | None:
+    """If the query returned no rows because the requested date is outside the
+    dataset's coverage, return a helpful message; otherwise return None."""
+    frame = state.get("source_frame")
+    plan = state.get("query_plan")
+    if frame is None or plan is None or "date" not in frame.columns or frame.empty:
+        return None
+    actual_min = pd.Timestamp(frame["date"].min())
+    actual_max = pd.Timestamp(frame["date"].max())
+    requested_periods: list[str] = []
+    for spec in plan.filters:
+        if spec.column != "date":
+            continue
+        if spec.operator == "eq" and isinstance(spec.value, str):
+            requested_periods.append(spec.value)
+        elif spec.operator in {"gte", "lte"} and isinstance(spec.value, str):
+            requested_periods.append(spec.value)
+        elif spec.operator == "between" and isinstance(spec.value, list):
+            requested_periods.extend(str(v) for v in spec.value)
+    if not requested_periods:
+        return None
+    requested = pd.Timestamp(min(requested_periods))
+    if requested > actual_max:
+        coverage = actual_max.strftime("%Y")
+        latest_year = actual_max.strftime("%Y")
+        return (
+            f"The {state['selected_dataset'].title} dataset covers data up to {latest_year}, "
+            f"but you asked for {requested.strftime('%Y')}. "
+            f"No data is available for that period yet."
+        )
+    return None
+
+
 def validate_result_node(state: AgentState, services: NodeServices) -> dict:
     validation = validate_result(state["analysis_result"], state["selected_dataset"], state["query_plan"])
     retry_count = state.get("retry_count", 0)
     updates: dict[str, Any] = {"validation": validation}
     if not validation.valid:
+        if state["analysis_result"].row_count == 0:
+            gap_message = _detect_date_range_gap(state)
+            if gap_message is not None:
+                updates.update({
+                    "errors": [gap_message],
+                    "validation": validation.model_copy(update={
+                        "status": "unsupported",
+                        "errors": [gap_message],
+                        "retry_action": "graceful_failure",
+                    }),
+                    "final_status": "unsupported",
+                })
+                return updates
         retry_count += 1
         updates.update({"retry_count": retry_count, "errors": validation.errors})
         if retry_count >= services.max_retries:
