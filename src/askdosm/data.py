@@ -42,7 +42,9 @@ def validate_schema(frame: pd.DataFrame, definition: DatasetDefinition) -> None:
         if expected == "number" and not pd.api.types.is_numeric_dtype(series):
             raise ValueError(f"Column {column} must be numeric")
         if expected == "date" and not (
-            pd.api.types.is_datetime64_any_dtype(series) or pd.api.types.is_object_dtype(series)
+            pd.api.types.is_datetime64_any_dtype(series)
+            or pd.api.types.is_object_dtype(series)
+            or pd.api.types.is_string_dtype(series)
         ):
             raise ValueError(f"Column {column} must contain dates")
 
