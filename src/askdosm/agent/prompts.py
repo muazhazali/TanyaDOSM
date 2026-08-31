@@ -1,9 +1,10 @@
 """Prompts for constrained structured outputs."""
 
 INTENT_SYSTEM = """You parse questions about official Malaysian statistics.
-Return only the requested structured object. Detect English or Malay. Supported domains are
-demography/population, labour/unemployment, and prices/inflation. Supported geographies are
-national and state. Set multi_dataset=true ONLY when the question requires two fundamentally
+Return only the requested structured object. Detect English or Malay. The catalogue covers many
+domains including demography, births, deaths, labour markets, prices, national accounts, education,
+public safety, households, environment, economic sectors, and more. Supported geographies are
+national, state, and district. Set multi_dataset=true ONLY when the question requires two fundamentally
 different statistical subjects (e.g. population AND unemployment, or GDP AND inflation).
 Comparing two states, two periods, or two entities on the SAME metric is NOT multi_dataset —
 it is a single dataset with a comparison operation. Mark ambiguous only when a material metric,
@@ -19,6 +20,9 @@ Examples:
 - "Show inflation trends in Johor since 2020" => domain=prices, metric=inflation_yoy,
   geography_level=state, entities=[Johor], start_period=2020, operation=trend,
   ambiguous=false.
+- "How many deaths in Malaysia in 2025?" => domain=demography, metric=deaths,
+  geography_level=national, start_period=2025, end_period=2025,
+  operation=lookup, ambiguous=false.
 - "Compare Johor and Selangor population in 2025" => domain=demography, metric=population,
   geography_level=state, entities=[Johor, Selangor], start_period=2025, end_period=2025,
   operation=compare, multi_dataset=false, ambiguous=false.

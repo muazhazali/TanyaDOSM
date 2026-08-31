@@ -53,20 +53,8 @@ def _normalize_intent(question: str, intent: QuestionIntent) -> QuestionIntent:
     """Repair obvious omissions deterministically without inventing statistical facts."""
     text = question.casefold()
     updates: dict[str, Any] = {}
-    metric_aliases = {
-        "population": ("demography", ["population", "populasi", "penduduk"]),
-        "u_rate": ("labour", ["unemployment rate", "kadar pengangguran"]),
-        "lf_unemployed": ("labour", ["unemployed people", "unemployed persons", "penganggur"]),
-        "p_rate": ("labour", ["participation rate", "kadar penyertaan"]),
-        "lf": ("labour", ["labour force", "tenaga buruh"]),
-        "inflation_yoy": ("prices", ["inflation", "inflasi"]),
-    }
-    if not intent.metric:
-        for metric, (domain, aliases) in metric_aliases.items():
-            if any(alias in text for alias in aliases):
-                updates.update({"metric": metric, "domain": domain})
-                break
-    elif intent.domain and "/" in intent.domain:
+
+    if intent.domain and "/" in intent.domain:
         updates["domain"] = intent.domain.split("/", 1)[0]
 
     years = re.findall(r"\b(?:19|20)\d{2}\b", text)
@@ -292,7 +280,7 @@ def generate_response(state: AgentState, services: NodeServices) -> dict:
 
 
 def graceful_failure(state: AgentState, services: NodeServices) -> dict:
-    message = " ".join(state.get("errors", [])) or "The question could not be answered from the five supported datasets."
+    message = " ".join(state.get("errors", [])) or "The question could not be answered from the supported datasets."
     payload = AnswerPayload(
         answer=message,
         error=message,
