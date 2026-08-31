@@ -273,11 +273,24 @@
       "annual live births"
     ],
     "dimensions": [
-      "date",
-      "abs",
-      "rate"
+      "date"
     ],
-    "measures": [],
+    "measures": [
+      {
+        "name": "abs",
+        "aliases": [
+          "abs"
+        ],
+        "unit": "count"
+      },
+      {
+        "name": "rate",
+        "aliases": [
+          "rate"
+        ],
+        "unit": "percent"
+      }
+    ],
     "frequency": "annual",
     "geography_level": "national",
     "source_agency": "Jabatan Pendaftaran Negara",
@@ -286,8 +299,8 @@
     "caveats": [],
     "expected_schema": {
       "date": "date",
-      "abs": "string",
-      "rate": "string"
+      "abs": "number",
+      "rate": "number"
     },
     "default_filters": {}
   },
@@ -481,11 +494,24 @@
       "annual stillbirths"
     ],
     "dimensions": [
-      "date",
-      "abs",
-      "rate"
+      "date"
     ],
-    "measures": [],
+    "measures": [
+      {
+        "name": "abs",
+        "aliases": [
+          "abs"
+        ],
+        "unit": "count"
+      },
+      {
+        "name": "rate",
+        "aliases": [
+          "rate"
+        ],
+        "unit": "percent"
+      }
+    ],
     "frequency": "annual",
     "geography_level": "national",
     "source_agency": "Ministry of Health",
@@ -494,8 +520,8 @@
     "caveats": [],
     "expected_schema": {
       "date": "date",
-      "abs": "string",
-      "rate": "string"
+      "abs": "number",
+      "rate": "number"
     },
     "default_filters": {}
   },
@@ -552,11 +578,24 @@
       "annual deaths"
     ],
     "dimensions": [
-      "date",
-      "abs",
-      "rate"
+      "date"
     ],
-    "measures": [],
+    "measures": [
+      {
+        "name": "abs",
+        "aliases": [
+          "abs"
+        ],
+        "unit": "count"
+      },
+      {
+        "name": "rate",
+        "aliases": [
+          "rate"
+        ],
+        "unit": "percent"
+      }
+    ],
     "frequency": "annual",
     "geography_level": "national",
     "source_agency": "Jabatan Pendaftaran Negara",
@@ -565,8 +604,8 @@
     "caveats": [],
     "expected_schema": {
       "date": "date",
-      "abs": "string",
-      "rate": "string"
+      "abs": "number",
+      "rate": "number"
     },
     "default_filters": {}
   },
@@ -1023,11 +1062,24 @@
     ],
     "dimensions": [
       "date",
-      "sex",
-      "abs",
-      "rate"
+      "sex"
     ],
-    "measures": [],
+    "measures": [
+      {
+        "name": "abs",
+        "aliases": [
+          "abs"
+        ],
+        "unit": "count"
+      },
+      {
+        "name": "rate",
+        "aliases": [
+          "rate"
+        ],
+        "unit": "percent"
+      }
+    ],
     "frequency": "annual",
     "geography_level": "national",
     "source_agency": "Department of Statistics Malaysia",
@@ -1037,8 +1089,8 @@
     "expected_schema": {
       "date": "date",
       "sex": "string",
-      "abs": "string",
-      "rate": "string"
+      "abs": "number",
+      "rate": "number"
     },
     "default_filters": {}
   },
@@ -1267,11 +1319,25 @@
       "number of households and living quarters"
     ],
     "dimensions": [
-      "date",
-      "households",
-      "living_quarters"
+      "date"
     ],
-    "measures": [],
+    "measures": [
+      {
+        "name": "households",
+        "aliases": [
+          "households"
+        ],
+        "unit": "count"
+      },
+      {
+        "name": "living_quarters",
+        "aliases": [
+          "living_quarters",
+          "living quarters"
+        ],
+        "unit": "count"
+      }
+    ],
     "frequency": "annual",
     "geography_level": "national",
     "source_agency": "Department of Statistics Malaysia",
@@ -1280,8 +1346,8 @@
     "caveats": [],
     "expected_schema": {
       "date": "date",
-      "households": "string",
-      "living_quarters": "string"
+      "households": "number",
+      "living_quarters": "number"
     },
     "default_filters": {}
   },
@@ -1339,11 +1405,26 @@
       "household income"
     ],
     "dimensions": [
-      "date",
-      "income_mean",
-      "income_median"
+      "date"
     ],
-    "measures": [],
+    "measures": [
+      {
+        "name": "income_mean",
+        "aliases": [
+          "income_mean",
+          "income mean"
+        ],
+        "unit": "RM million"
+      },
+      {
+        "name": "income_median",
+        "aliases": [
+          "income_median",
+          "income median"
+        ],
+        "unit": "RM million"
+      }
+    ],
     "frequency": "annual",
     "geography_level": "national",
     "source_agency": "Department of Statistics Malaysia",
@@ -1352,8 +1433,8 @@
     "caveats": [],
     "expected_schema": {
       "date": "date",
-      "income_mean": "string",
-      "income_median": "string"
+      "income_mean": "number",
+      "income_median": "number"
     },
     "default_filters": {}
   },
@@ -1547,12 +1628,34 @@
       "poverty"
     ],
     "dimensions": [
-      "date",
-      "poverty_absolute",
-      "poverty_hardcore",
-      "poverty_relative"
+      "date"
     ],
-    "measures": [],
+    "measures": [
+      {
+        "name": "poverty_absolute",
+        "aliases": [
+          "poverty_absolute",
+          "poverty absolute"
+        ],
+        "unit": "count"
+      },
+      {
+        "name": "poverty_hardcore",
+        "aliases": [
+          "poverty_hardcore",
+          "poverty hardcore"
+        ],
+        "unit": "count"
+      },
+      {
+        "name": "poverty_relative",
+        "aliases": [
+          "poverty_relative",
+          "poverty relative"
+        ],
+        "unit": "count"
+      }
+    ],
     "frequency": "annual",
     "geography_level": "national",
     "source_agency": "Department of Statistics Malaysia",
@@ -1561,9 +1664,9 @@
     "caveats": [],
     "expected_schema": {
       "date": "date",
-      "poverty_absolute": "string",
-      "poverty_hardcore": "string",
-      "poverty_relative": "string"
+      "poverty_absolute": "number",
+      "poverty_hardcore": "number",
+      "poverty_relative": "number"
     },
     "default_filters": {}
   },
@@ -1678,10 +1781,17 @@
       "income inequality"
     ],
     "dimensions": [
-      "date",
-      "gini"
+      "date"
     ],
-    "measures": [],
+    "measures": [
+      {
+        "name": "gini",
+        "aliases": [
+          "gini"
+        ],
+        "unit": "gini coefficient (0-1)"
+      }
+    ],
     "frequency": "annual",
     "geography_level": "national",
     "source_agency": "Department of Statistics Malaysia",
@@ -1690,7 +1800,7 @@
     "caveats": [],
     "expected_schema": {
       "date": "date",
-      "gini": "string"
+      "gini": "number"
     },
     "default_filters": {}
   },
@@ -6603,10 +6713,17 @@
       "area of permanent forest reserves"
     ],
     "dimensions": [
-      "date",
-      "area"
+      "date"
     ],
-    "measures": [],
+    "measures": [
+      {
+        "name": "area",
+        "aliases": [
+          "area"
+        ],
+        "unit": "hectares"
+      }
+    ],
     "frequency": "annual",
     "geography_level": "national",
     "source_agency": "Jabatan Perhutanan Semenanjung Malaysia",
@@ -6615,7 +6732,7 @@
     "caveats": [],
     "expected_schema": {
       "date": "date",
-      "area": "string"
+      "area": "number"
     },
     "default_filters": {}
   },
@@ -6969,10 +7086,17 @@
     ],
     "dimensions": [
       "date",
-      "sex",
-      "incidence"
+      "sex"
     ],
-    "measures": [],
+    "measures": [
+      {
+        "name": "incidence",
+        "aliases": [
+          "incidence"
+        ],
+        "unit": "per 1,000 uninfected population"
+      }
+    ],
     "frequency": "annual",
     "geography_level": "national",
     "source_agency": "Ministry of Health",
@@ -6982,7 +7106,7 @@
     "expected_schema": {
       "sex": "string",
       "date": "date",
-      "incidence": "string"
+      "incidence": "number"
     },
     "default_filters": {
       "sex": "both"
@@ -7040,10 +7164,17 @@
       "sdg 10-c-1: remittance costs as a % of the amount remitted"
     ],
     "dimensions": [
-      "date",
-      "value"
+      "date"
     ],
-    "measures": [],
+    "measures": [
+      {
+        "name": "value",
+        "aliases": [
+          "value"
+        ],
+        "unit": "percent"
+      }
+    ],
     "frequency": "annual",
     "geography_level": "national",
     "source_agency": "Department of Statistics Malaysia",
@@ -7052,7 +7183,7 @@
     "caveats": [],
     "expected_schema": {
       "date": "date",
-      "value": "string"
+      "value": "number"
     },
     "default_filters": {}
   },
@@ -7433,11 +7564,25 @@
       "cumulative openapi hits by endpoint"
     ],
     "dimensions": [
-      "endpoint",
-      "hits",
-      "hits_prop"
+      "endpoint"
     ],
-    "measures": [],
+    "measures": [
+      {
+        "name": "hits",
+        "aliases": [
+          "hits"
+        ],
+        "unit": "count"
+      },
+      {
+        "name": "hits_prop",
+        "aliases": [
+          "hits_prop",
+          "hits proportion"
+        ],
+        "unit": "percent"
+      }
+    ],
     "frequency": "monthly",
     "geography_level": "national",
     "source_agency": "Jabatan Digital Negara",
@@ -7446,8 +7591,8 @@
     "caveats": [],
     "expected_schema": {
       "endpoint": "string",
-      "hits": "string",
-      "hits_prop": "string"
+      "hits": "number",
+      "hits_prop": "number"
     },
     "default_filters": {}
   },

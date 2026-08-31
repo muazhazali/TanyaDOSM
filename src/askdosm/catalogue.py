@@ -57,6 +57,12 @@ class Catalogue:
                 if intent.metric and intent.metric.casefold() in haystack:
                     score += 0.25
                     reasons.append("metric matched")
+                if intent.metric:
+                    metric_cf = intent.metric.casefold()
+                    aliases_cf = {a.casefold() for a in dataset.aliases} | {dataset.title.casefold()}
+                    if metric_cf in aliases_cf:
+                        score += 0.15
+                        reasons.append("exact metric alias match")
             candidates.append(
                 DatasetCandidate(dataset_id=dataset.dataset_id, score=min(score, 1.0), reason="; ".join(reasons) or "weak metadata match")
             )
