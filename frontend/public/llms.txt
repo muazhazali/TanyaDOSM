@@ -1,0 +1,13 @@
+# TanyaDOSM
+
+> TanyaDOSM answers plain-language questions using registered official Malaysian public datasets.
+
+## Main page
+
+- [Ask TanyaDOSM](/): Ask in English or Bahasa Melayu and review the official data source behind each answer.
+
+## Usage notes
+
+- Each question is answered independently from one registered dataset.
+- Answers include the source agency, data date, unit, and verified rows used.
+- TanyaDOSM does not produce forecasts or combine multiple datasets in one answer.
