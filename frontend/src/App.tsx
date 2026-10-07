@@ -1,9 +1,13 @@
 import { lazy, Suspense, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, BarChart3, Check, ChevronDown, Circle, Clock3, Copy, Database, Download, ExternalLink, FileQuestion, LoaderCircle, Menu, MoreHorizontal, Pencil, RefreshCw, Search, Send, Share2, ThumbsDown, ThumbsUp, Trash2, X } from 'lucide-react'
-import { api, subscribeToRun } from './api'
+import { api, ApiError, subscribeToRun } from './api'
 import { initialStreamState, latestArtifact, streamReducer } from './runState'
 import type { AnswerPayload, DatasetDefinition, RunEvent, RunSnapshot, RunStatus } from './types'
+
+function isNotFound(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 404
+}
 
 const ResultChart = lazy(() => import('./Chart').then((module) => ({ default: module.ResultChart })))
 
@@ -245,10 +249,24 @@ export default function App() {
   const conversations = useQuery({ queryKey: ['conversations'], queryFn: api.listConversations, refetchInterval: 5000, enabled: !sharedRunId })
   const health = useQuery({ queryKey: ['health'], queryFn: api.health, refetchInterval: 30000, retry: false })
   const datasets = useQuery({ queryKey: ['datasets'], queryFn: api.datasets, staleTime: 5 * 60 * 1000 })
-  const selected = useQuery({ queryKey: ['run', selectedId], queryFn: () => api.getRun(selectedId!), enabled: !!selectedId, refetchInterval: selectedId ? 1000 : false })
-  const conversation = useQuery({ queryKey: ['conversation', conversationId], queryFn: () => api.getConversation(conversationId!), enabled: !!conversationId && !sharedRunId, refetchInterval: conversationId ? 1000 : false, retry: false })
+  const selected = useQuery({ queryKey: ['run', selectedId], queryFn: () => api.getRun(selectedId!), enabled: !!selectedId, refetchInterval: (query) => (query.state.error && isNotFound(query.state.error) ? false : selectedId ? 1000 : false), retry: false })
+  const conversation = useQuery({ queryKey: ['conversation', conversationId], queryFn: () => api.getConversation(conversationId!), enabled: !!conversationId && !sharedRunId, refetchInterval: (query) => (query.state.error && isNotFound(query.state.error) ? false : conversationId ? 1000 : false), retry: false })
 
   useEffect(() => { if (conversationId) localStorage.setItem('tanyadosm-active-conversation', conversationId); else localStorage.removeItem('tanyadosm-active-conversation') }, [conversationId])
+  useEffect(() => {
+    if (sharedRunId) return
+    if (conversation.isError && isNotFound(conversation.error)) {
+      setConversationId(null)
+      setSelectedId(null)
+    }
+  }, [conversation.isError, conversation.error, sharedRunId])
+  useEffect(() => {
+    if (!sharedRunId) return
+    if (selected.isError && isNotFound(selected.error)) {
+      window.history.replaceState({}, '', window.location.pathname)
+      setSelectedId(null)
+    }
+  }, [selected.isError, selected.error, sharedRunId])
   useEffect(() => { const latest = conversation.data?.turns.at(-1); if (latest && !selectedId) setSelectedId(latest.id) }, [conversation.data, selectedId])
   useEffect(() => { if (conversation.data?.turns.length) endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [conversation.data?.turns.length])
   useEffect(() => {

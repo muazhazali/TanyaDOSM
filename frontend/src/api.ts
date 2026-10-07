@@ -1,10 +1,19 @@
 import type { CatalogueMonitorState, ConversationSnapshot, ConversationSummary, DatasetDefinition, HealthStatus, RunEvent, RunSnapshot, RunSummary } from './types'
 
+export class ApiError extends Error {
+  readonly status: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init)
   if (!response.ok) {
     const detail = await response.json().catch(() => ({ detail: response.statusText }))
-    throw new Error(detail.detail || 'Request failed')
+    throw new ApiError(response.status, detail.detail || 'Request failed')
   }
   return response.status === 204 ? (undefined as T) : response.json()
 }
