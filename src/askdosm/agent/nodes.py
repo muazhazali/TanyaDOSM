@@ -23,6 +23,7 @@ from askdosm.models import (
     QueryPlan,
     QuestionIntent,
     SourceReference,
+    TokenUsage,
 )
 from askdosm.validation import validate_result
 from askdosm.visualization import choose_visualization
@@ -30,6 +31,8 @@ from askdosm.visualization import choose_visualization
 
 class StructuredModel(Protocol):
     def with_structured_output(self, schema: type): ...
+    @property
+    def usage(self) -> TokenUsage | None: ...
 
 
 @dataclass
@@ -309,7 +312,8 @@ def generate_response(state: AgentState, services: NodeServices) -> dict:
     )
     trace = ExecutionTrace(
         intent=state["intent"], selection_reason=state.get("selection_reason"), query_plan=state["query_plan"],
-        calculation=result.calculation, rows_used=result.row_count, validation=state["validation"], retry_count=state.get("retry_count", 0)
+        calculation=result.calculation, rows_used=result.row_count, validation=state["validation"], retry_count=state.get("retry_count", 0),
+        token_usage=getattr(services.llm, "usage", None),
     )
     follow_ups = generate_follow_ups(
         dataset=definition, intent=state["intent"], plan=state["query_plan"], result=result,
@@ -330,6 +334,6 @@ def graceful_failure(state: AgentState, services: NodeServices) -> dict:
     payload = AnswerPayload(
         answer=message,
         error=message,
-        trace=ExecutionTrace(intent=state.get("intent"), retry_count=state.get("retry_count", 0), validation=state.get("validation")),
+        trace=ExecutionTrace(intent=state.get("intent"), retry_count=state.get("retry_count", 0), validation=state.get("validation"), token_usage=getattr(services.llm, "usage", None)),
     )
     return {"answer": payload, "final_status": "failed"}

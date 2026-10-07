@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, BarChart3, Check, ChevronDown, Circle, Clock3, Copy, Database, Download, ExternalLink, FileQuestion, LoaderCircle, Menu, MoreHorizontal, Pencil, RefreshCw, Search, Send, Share2, ThumbsDown, ThumbsUp, Trash2, X } from 'lucide-react'
 import { api, ApiError, subscribeToRun } from './api'
 import { initialStreamState, latestArtifact, streamReducer } from './runState'
-import type { AnswerPayload, DatasetDefinition, RunEvent, RunSnapshot, RunStatus } from './types'
+import type { AnswerPayload, DatasetDefinition, RunEvent, RunSnapshot, RunStatus, TokenUsage } from './types'
 
 function isNotFound(error: unknown): boolean {
   return error instanceof ApiError && error.status === 404
@@ -129,6 +129,16 @@ function ResultTable({ answer }: { answer: AnswerPayload }) {
   </details>
 }
 
+function formatCost(usd: number): string {
+  if (usd < 0.0001) return '<$0.0001'
+  if (usd < 0.01) return `$${usd.toFixed(5)}`
+  return `$${usd.toFixed(4)}`
+}
+
+function UsageBadge({ usage }: { usage: TokenUsage }) {
+  return <details className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600"><summary className="cursor-pointer font-semibold text-slate-700">Token usage & estimated cost</summary><div className="mt-3 grid gap-2 sm:grid-cols-2"><div><span className="text-slate-400">Model</span><p className="font-medium text-slate-800">{usage.model || '—'}</p></div><div><span className="text-slate-400">Estimated cost</span><p className="font-medium text-slate-800">{formatCost(usage.estimated_cost_usd)}</p></div><div><span className="text-slate-400">Prompt tokens</span><p className="font-medium text-slate-800">{usage.prompt_tokens.toLocaleString()}{usage.cached_prompt_tokens > 0 && <span className="text-slate-400"> ({usage.cached_prompt_tokens.toLocaleString()} cached)</span>}</p></div><div><span className="text-slate-400">Completion tokens</span><p className="font-medium text-slate-800">{usage.completion_tokens.toLocaleString()}</p></div><div><span className="text-slate-400">Total tokens</span><p className="font-medium text-slate-800">{usage.total_tokens.toLocaleString()}</p></div><div><span className="text-slate-400">Pricing (per 1M)</span><p className="font-medium text-slate-800">${usage.input_price_per_m.toFixed(2)} in · ${usage.cached_input_price_per_m.toFixed(2)} cached · ${usage.output_price_per_m.toFixed(2)} out</p></div></div></details>
+}
+
 function Results({ answer, runId, question, onFollowUp }: { answer: AnswerPayload; runId: string; question: string; onFollowUp?: (value: string) => void }) {
   const [copied, setCopied] = useState<'answer' | 'link' | null>(null)
   const [feedback, setFeedback] = useState<boolean | null>(null)
@@ -157,6 +167,7 @@ function Results({ answer, runId, question, onFollowUp }: { answer: AnswerPayloa
       <p className="mt-1">{answer.source.agency} · Data date: {formatPeriod(answer.source.period)}</p>
       <p className="mt-1 text-xs text-slate-500">Unit: {answer.source.unit} · Based on {rowsUsed} verified {rowsUsed === 1 ? 'row' : 'rows'}.</p>
     </div>}
+    {answer.trace?.token_usage && answer.trace.token_usage.total_tokens > 0 && <UsageBadge usage={answer.trace.token_usage} />}
     {!answer.error && <div className="flex flex-wrap items-center gap-2 border-t border-slate-200 pt-4">
       <button onClick={() => void copy('answer')} className="action-button"><Copy size={15} /> {copied === 'answer' ? 'Copied' : 'Copy answer'}</button>
       {answer.source && <a href={answer.source.url} target="_blank" rel="noreferrer" className="action-button"><ExternalLink size={15} /> Open source</a>}

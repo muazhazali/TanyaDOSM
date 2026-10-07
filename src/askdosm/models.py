@@ -192,6 +192,43 @@ class SourceReference(BaseModel):
     cache_freshness: str | None = None
 
 
+class TokenUsage(BaseModel):
+    """Accumulated token usage for a single run, with estimated cost in USD.
+
+    Prices are per 1 million tokens. ``cached_input_price`` applies to the
+    cached portion of the prompt tokens; non-cached prompt tokens use
+    ``input_price``. Cost estimates are derived from the provider's public
+    price sheet and are not billing-accurate.
+    """
+
+    model: str = ""
+    prompt_tokens: int = 0
+    cached_prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    estimated_cost_usd: float = 0.0
+    input_price_per_m: float = 0.0
+    cached_input_price_per_m: float = 0.0
+    output_price_per_m: float = 0.0
+
+    def add(self, prompt: int, completion: int, cached: int = 0) -> None:
+        """Accumulate a single LLM call's tokens and recompute the cost."""
+        self.prompt_tokens += max(0, int(prompt))
+        self.completion_tokens += max(0, int(completion))
+        self.cached_prompt_tokens += max(0, int(cached))
+        self.total_tokens = self.prompt_tokens + self.completion_tokens
+        self._recompute_cost()
+
+    def _recompute_cost(self) -> None:
+        non_cached = max(0, self.prompt_tokens - self.cached_prompt_tokens)
+        cost = (
+            non_cached * self.input_price_per_m
+            + self.cached_prompt_tokens * self.cached_input_price_per_m
+            + self.completion_tokens * self.output_price_per_m
+        ) / 1_000_000
+        self.estimated_cost_usd = round(cost, 6)
+
+
 class ExecutionTrace(BaseModel):
     intent: QuestionIntent | None = None
     selection_reason: str | None = None
@@ -200,6 +237,7 @@ class ExecutionTrace(BaseModel):
     rows_used: int = 0
     validation: ValidationResult | None = None
     retry_count: int = 0
+    token_usage: TokenUsage | None = None
 
 
 class AnswerPayload(BaseModel):

@@ -8,6 +8,29 @@ export interface VisualizationSpec {
   title?: string | null
 }
 
+export interface TokenUsage {
+  model: string
+  prompt_tokens: number
+  cached_prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+  estimated_cost_usd: number
+  input_price_per_m: number
+  cached_input_price_per_m: number
+  output_price_per_m: number
+}
+
+export interface ExecutionTrace {
+  intent?: Record<string, unknown> | null
+  selection_reason?: string | null
+  query_plan?: Record<string, unknown> | null
+  calculation?: string | null
+  rows_used?: number
+  validation?: Record<string, unknown> | null
+  retry_count?: number
+  token_usage?: TokenUsage | null
+}
+
 export interface AnswerPayload {
   answer: string
   table_rows: Record<string, unknown>[]
@@ -21,7 +44,7 @@ export interface AnswerPayload {
     unit: string
     cache_freshness?: string | null
   } | null
-  trace: Record<string, unknown>
+  trace: ExecutionTrace
   error?: string | null
   follow_ups?: string[]
 }

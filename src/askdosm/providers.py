@@ -11,10 +11,12 @@ from typing import Any
 import httpx
 from langchain_core.messages import AIMessage, BaseMessage, SystemMessage, ToolMessage
 from langchain_core.exceptions import OutputParserException
+from langchain_core.callbacks import BaseCallbackHandler
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ValidationError
 
 from askdosm.config import Settings
+from askdosm.models import TokenUsage
 
 
 logger = logging.getLogger(__name__)
@@ -22,6 +24,49 @@ logger = logging.getLogger(__name__)
 
 class HostedProviderError(RuntimeError):
     """A safe provider failure that contains no request or credential data."""
+
+
+class _UsageCallback(BaseCallbackHandler):
+    """Captures token usage from ``on_llm_end`` into a ``TokenUsage`` sink."""
+
+    def __init__(self, usage: TokenUsage):
+        self.usage = usage
+
+    def on_llm_end(self, response: Any, **_kwargs: Any) -> None:
+        llm_output = getattr(response, "llm_output", None) or {}
+        token_usage = llm_output.get("token_usage") or llm_output.get("usage") or {}
+        if not token_usage:
+            return
+        prompt = int(token_usage.get("prompt_tokens", 0) or 0)
+        completion = int(token_usage.get("completion_tokens", 0) or 0)
+        cached = 0
+        details = token_usage.get("prompt_tokens_details") or {}
+        if isinstance(details, dict):
+            cached = int(details.get("cached_tokens", 0) or 0)
+        if prompt or completion:
+            self.usage.add(prompt=prompt, completion=completion, cached=cached)
+
+
+OLLAMA_PRICING: dict[str, dict[str, float]] = {
+    "deepseek-v4.1-flash": {"input": 0.30, "cached": 0.006, "output": 1.20},
+    "deepseek-v4-pro": {"input": 1.32, "cached": 0.044, "output": 3.96},
+    "gemma4": {"input": 0.14, "cached": 0.05, "output": 0.40},
+    "glm-5.3": {"input": 1.40, "cached": 0.26, "output": 4.40},
+    "glm-5.3-flash": {"input": 0.15, "cached": 0.03, "output": 0.50},
+}
+
+DEFAULT_PRICING: dict[str, float] = OLLAMA_PRICING["glm-5.3-flash"]
+
+
+def _pricing_for(model: str) -> dict[str, float]:
+    """Resolve the price row for a model name, falling back to glm-5.3-flash."""
+    name = (model or "").strip().lower()
+    if name in OLLAMA_PRICING:
+        return OLLAMA_PRICING[name]
+    for key, row in OLLAMA_PRICING.items():
+        if name.startswith(key) or key in name:
+            return row
+    return DEFAULT_PRICING
 
 
 def _status_code(exc: Exception) -> int | None:
@@ -103,15 +148,24 @@ class _StructuredInvoker:
         model: str,
         max_retries: int,
         output_schema: type[BaseModel] | None = None,
+        usage: TokenUsage | None = None,
     ):
         self.runnable = runnable
         self.model = model
         self.max_retries = max_retries
         self.output_schema = output_schema
+        self.usage = usage
+
+    def _callbacks(self) -> list:
+        if self.usage is None:
+            return []
+        return [_UsageCallback(self.usage)]
 
     def invoke(self, messages: Any):
+        config = {"callbacks": self._callbacks()} if self._callbacks() else None
+
         def single(current_messages: Any):
-            result = self.runnable.invoke(current_messages)
+            result = self.runnable.invoke(current_messages, config=config)
             if self.output_schema is not None and not isinstance(result, self.output_schema):
                 result = self.output_schema.model_validate(result)
             return result
@@ -282,15 +336,17 @@ class _StructuredJsonInvoker(_StructuredInvoker):
         max_retries: int,
         output_schema: type[BaseModel],
         instructions: str,
+        usage: TokenUsage | None = None,
     ):
-        super().__init__(runnable, model, max_retries, output_schema)
+        super().__init__(runnable, model, max_retries, output_schema, usage)
         self.instructions = instructions
 
     def invoke(self, messages: Any):
         prepared = self._prepare(messages)
+        config = {"callbacks": self._callbacks()} if self._callbacks() else None
 
         def single(prepared_messages: list):
-            raw = self.runnable.invoke(prepared_messages)
+            raw = self.runnable.invoke(prepared_messages, config=config)
             if isinstance(raw, self.output_schema):
                 return raw
             if isinstance(raw, BaseModel):
@@ -340,6 +396,13 @@ class GroqChatModel:
         self.model = settings.chat_model
         self.max_retries = settings.provider_max_retries
         self.json_object_mode = "ollama.com" in settings.groq_base_url.lower()
+        pricing = _pricing_for(settings.chat_model)
+        self.usage = TokenUsage(
+            model=settings.chat_model,
+            input_price_per_m=pricing["input"],
+            cached_input_price_per_m=pricing["cached"],
+            output_price_per_m=pricing["output"],
+        )
         self._model = ChatOpenAI(
             model=settings.chat_model,
             api_key=settings.groq_api_key,
@@ -357,10 +420,10 @@ class GroqChatModel:
             # ignores it; json_object mode is the only enforced variant.
             instructions = _json_object_instructions(schema)
             runnable = self._model.with_structured_output(schema, method="json_mode")
-            return _StructuredJsonInvoker(runnable, self.model, self.max_retries, schema, instructions)
+            return _StructuredJsonInvoker(runnable, self.model, self.max_retries, schema, instructions, usage=self.usage)
         strict_schema = _strict_json_schema(schema)
         runnable = self._model.with_structured_output(strict_schema, method="json_schema", strict=True)
-        return _StructuredInvoker(runnable, self.model, self.max_retries, schema)
+        return _StructuredInvoker(runnable, self.model, self.max_retries, schema, usage=self.usage)
 
 
 class CloudflareEmbeddings:

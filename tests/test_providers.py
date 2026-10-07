@@ -27,7 +27,7 @@ def test_groq_uses_strict_json_schema(monkeypatch):
     observed = {}
 
     class FakeRunnable:
-        def invoke(self, messages):
+        def invoke(self, messages, **kwargs):
             return QuestionIntent(metric="population")
 
     class FakeChatOpenAI:
@@ -88,7 +88,7 @@ def test_groq_retries_transient_failures_without_exposing_details(monkeypatch):
     calls = 0
 
     class FakeRunnable:
-        def invoke(self, messages):
+        def invoke(self, messages, **kwargs):
             nonlocal calls
             calls += 1
             if calls < 3:
@@ -106,7 +106,7 @@ def test_groq_retries_transient_failures_without_exposing_details(monkeypatch):
 
 def test_groq_authentication_error_is_sanitized():
     class FakeRunnable:
-        def invoke(self, messages):
+        def invoke(self, messages, **kwargs):
             request = httpx.Request("POST", "https://api.groq.com")
             response = httpx.Response(401, request=request)
             raise httpx.HTTPStatusError("contains-sensitive-provider-body", request=request, response=response)
