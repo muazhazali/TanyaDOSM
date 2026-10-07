@@ -26,7 +26,7 @@ from askdosm.catalogue import Catalogue
 from askdosm.config import Settings, get_settings
 from askdosm.data import DatasetCache
 from askdosm.monitor import CatalogueMonitor, MonitorState
-from askdosm.providers import check_cloudflare, check_groq
+from askdosm.providers import check_cloudflare, check_ollama
 
 
 logger = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ def create_app(settings: Settings | None = None, service_factory=None) -> FastAP
     @asynccontextmanager
     async def lifespan(application: FastAPI):
         if uses_default_service:
-            config.require_groq_credentials()
+            config.require_ollama_credentials()
         application.state.store = store
         application.state.manager = manager
         application.state.monitor = monitor
@@ -95,7 +95,7 @@ def create_app(settings: Settings | None = None, service_factory=None) -> FastAP
             now = monotonic()
             if now - float(health_cache["checked_at"]) >= 30:
                 llm_status, embedding_status = await asyncio.gather(
-                    asyncio.to_thread(check_groq, config),
+                    asyncio.to_thread(check_ollama, config),
                     asyncio.to_thread(check_cloudflare, config),
                 )
                 health_cache.update(

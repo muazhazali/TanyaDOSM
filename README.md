@@ -1,18 +1,18 @@
 # TanyaDOSM
 
-TanyaDOSM is a natural-language analytics assistant for five curated Malaysian public-statistics datasets. A React interface streams a sanitized view of its LangGraph workflow while FastAPI, hosted Groq and Cloudflare inference, and deterministic Pandas/DuckDB operations produce source-grounded results.
+TanyaDOSM is a natural-language analytics assistant for five curated Malaysian public-statistics datasets. A React interface streams a sanitized view of its LangGraph workflow while FastAPI, hosted Ollama Cloud and Cloudflare inference, and deterministic Pandas/DuckDB operations produce source-grounded results.
 
 ## Requirements and setup
 
 - Windows with Python 3.14.x (developed against Python 3.14.6)
 - Node.js 24 and pnpm 10.15.0 (managed through Corepack)
 - [`uv`](https://docs.astral.sh/uv/)
-- A Groq API key and a Cloudflare account with a Workers AI API token
+- An Ollama Cloud API key and a Cloudflare account with a Workers AI API token
 
 ```powershell
 uv sync
 Copy-Item .env.example .env
-# Add ASKDOSM_GROQ_API_KEY, ASKDOSM_CLOUDFLARE_ACCOUNT_ID,
+# Add ASKDOSM_OLLAMA_API_KEY, ASKDOSM_CLOUDFLARE_ACCOUNT_ID,
 # and ASKDOSM_CLOUDFLARE_API_TOKEN to .env.
 corepack enable
 corepack install --global pnpm@10.15.0
@@ -69,7 +69,7 @@ Monitoring state is persisted at `.askdosm-cache/catalogue-monitor.json`. Restar
 ```text
 React/Vite
    -> FastAPI run queue + durable SSE events
-   -> parse intent (strict structured Groq output)
+   -> parse intent (strict structured Ollama Cloud output)
    -> hybrid catalogue search (aliases + metadata embeddings)
    -> select and inspect registered dataset
    -> constrained structured query plan
@@ -88,7 +88,7 @@ The browser receives node status and approved structured artifacts over Server-S
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/api/health` | Check catalogue, SQLite, Groq, and Cloudflare readiness |
+| `GET` | `/api/health` | Check catalogue, SQLite, Ollama Cloud, and Cloudflare readiness |
 | `GET` | `/api/datasets` | List the five public dataset definitions |
 | `GET` | `/api/catalogue-monitor` | Read registered-file status and review-only discoveries |
 | `POST` | `/api/catalogue-monitor/check` | Run an immediate monitoring and refresh check |
@@ -110,15 +110,15 @@ Invoke-RestMethod -Method Post http://localhost:8000/api/catalogue-monitor/check
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `ASKDOSM_CHAT_MODEL` | `openai/gpt-oss-20b` | Groq intent and query-plan model |
-| `ASKDOSM_GROQ_API_KEY` | required | Groq API credential |
-| `ASKDOSM_GROQ_BASE_URL` | `https://api.groq.com/openai/v1` | Groq OpenAI-compatible endpoint |
+| `ASKDOSM_CHAT_MODEL` | `openai/gpt-oss-20b` | Ollama Cloud intent and query-plan model |
+| `ASKDOSM_OLLAMA_API_KEY` | required | Ollama Cloud API credential |
+| `ASKDOSM_OLLAMA_BASE_URL` | `https://ollama.com/v1` | Ollama Cloud OpenAI-compatible endpoint |
 | `ASKDOSM_EMBEDDING_MODEL` | `@cf/baai/bge-m3` | Multilingual Cloudflare catalogue embeddings |
 | `ASKDOSM_CLOUDFLARE_ACCOUNT_ID` | optional | Cloudflare account; lexical search is used when absent |
 | `ASKDOSM_CLOUDFLARE_API_TOKEN` | optional | Workers AI token; lexical search is used when absent |
 | `ASKDOSM_CLOUDFLARE_BASE_URL` | `https://api.cloudflare.com/client/v4/accounts` | Cloudflare API endpoint |
 | `ASKDOSM_REQUEST_TIMEOUT` | `30` | Reserved request timeout in seconds |
-| `ASKDOSM_PROVIDER_MAX_RETRIES` | `2` | Retries for transient Groq failures |
+| `ASKDOSM_PROVIDER_MAX_RETRIES` | `2` | Retries for transient Ollama Cloud failures |
 | `ASKDOSM_CACHE_DIR` | `.askdosm-cache` | Local public-data cache |
 | `ASKDOSM_CACHE_TTL_HOURS` | `720` | Dataset refresh interval (30 days) |
 | `ASKDOSM_MONITOR_INTERVAL_HOURS` | `168` | Weekly check for official file changes and catalogue additions |
@@ -148,15 +148,15 @@ $env:ASKDOSM_RUN_LIVE_TESTS = "1"
 uv run pytest -m integration
 ```
 
-Ordinary tests use in-memory fixtures and mocked provider responses. Tests marked `integration` may access live DOSM, Groq, or Cloudflare services and are not part of the default offline suite.
+Ordinary tests use in-memory fixtures and mocked provider responses. Tests marked `integration` may access live DOSM, Ollama Cloud, or Cloudflare services and are not part of the default offline suite.
 
 ## Hosted AI, quotas, and privacy
 
-Groq receives each question plus the small structured context needed to parse intent and build a constrained query plan. Cloudflare receives catalogue descriptions when their embedding cache is built and the question text for semantic ranking. Statistical dataset rows are not sent to either provider. Provider prompts, raw responses, reasoning, and credentials are not emitted to the browser or stored in run events.
+Ollama Cloud receives each question plus the small structured context needed to parse intent and build a constrained query plan. Cloudflare receives catalogue descriptions when their embedding cache is built and the question text for semantic ranking. Statistical dataset rows are not sent to either provider. Provider prompts, raw responses, reasoning, and credentials are not emitted to the browser or stored in run events.
 
-The default models are selected for the providers' free tiers, but quotas and availability can change. TanyaDOSM never switches to a paid model or another provider automatically. A Cloudflare failure degrades to deterministic lexical catalogue matching; a Groq authentication, quota, or availability failure safely fails the run. Health checks use cached non-generative endpoints and therefore do not spend inference tokens.
+The default models are selected for the providers' free tiers, but quotas and availability can change. TanyaDOSM never switches to a paid model or another provider automatically. A Cloudflare failure degrades to deterministic lexical catalogue matching; an Ollama Cloud authentication, quota, or availability failure safely fails the run. Health checks use cached non-generative endpoints and therefore do not spend inference tokens.
 
-For production, store `.env` as `root:tanyadosm` with mode `640`. The LXC requires outbound HTTPS access to `api.groq.com` and `api.cloudflare.com`; Ollama and GPU passthrough are not required.
+For production, store `.env` as `root:tanyadosm` with mode `640`. The LXC requires outbound HTTPS access to `api.ollama.com` and `api.cloudflare.com`; GPU passthrough are not required.
 
 The benchmark in `evals/questions.json` contains 50 cases. `evals/evaluate.py` validates its structure and category distribution; running live model scoring is intentionally opt-in because it incurs API calls.
 

@@ -1,8 +1,8 @@
 """Live accuracy scorer for the TanyaDOSM benchmark.
 
 Runs the full LangGraph pipeline for each of the 50 benchmark questions against
-the configured Groq model and reports per-question and summary accuracy. Requires
-ASKDOSM_GROQ_API_KEY (and optional Cloudflare credentials for semantic search).
+the configured Ollama Cloud model and reports per-question and summary accuracy. Requires
+ASKDOSM_OLLAMA_API_KEY (and optional Cloudflare credentials for semantic search).
 
 Usage:
     uv run python evals/score.py [--detailed]

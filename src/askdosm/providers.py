@@ -84,11 +84,11 @@ def _is_transient(exc: Exception) -> bool:
 
 
 def _strict_json_schema(model: type[BaseModel]) -> dict[str, Any]:
-    """Convert Pydantic output into Groq's strict JSON Schema subset."""
+    """Convert Pydantic output into Ollama Cloud's strict JSON Schema subset."""
     schema = model.model_json_schema()
 
     def collapse_nullable(value: dict[str, Any]) -> None:
-        """Replace Pydantic's nullable ``anyOf`` with Groq's type union form."""
+        """Replace Pydantic's nullable ``anyOf`` with Ollama Cloud's type union form."""
         branches = value.get("anyOf")
         if not isinstance(branches, list) or len(branches) != 2:
             return
@@ -113,7 +113,7 @@ def _strict_json_schema(model: type[BaseModel]) -> dict[str, Any]:
         value.update(replacement)
 
     def remove_ambiguous_integer_branch(value: dict[str, Any]) -> None:
-        """Groq treats integer and number branches in one union as ambiguous."""
+        """Ollama Cloud treats integer and number branches in one union as ambiguous."""
         branches = value.get("anyOf")
         if not isinstance(branches, list):
             return
@@ -178,7 +178,7 @@ class _StructuredInvoker:
             try:
                 result = single(messages)
                 logger.info(
-                    "hosted_provider_request provider=groq model=%s latency_ms=%.2f retry_count=%d status=success",
+                    "hosted_provider_request provider=ollama model=%s latency_ms=%.2f retry_count=%d status=success",
                     self.model,
                     (time.perf_counter() - started) * 1000,
                     attempt,
@@ -188,7 +188,7 @@ class _StructuredInvoker:
                 status = _status_code(exc)
                 transient = _is_transient(exc) or isinstance(exc, OutputParserException)
                 logger.warning(
-                    "hosted_provider_request provider=groq model=%s latency_ms=%.2f retry_count=%d status=failed http_status=%s transient=%s",
+                    "hosted_provider_request provider=ollama model=%s latency_ms=%.2f retry_count=%d status=failed http_status=%s transient=%s",
                     self.model,
                     (time.perf_counter() - started) * 1000,
                     attempt,
@@ -388,14 +388,14 @@ class _StructuredJsonInvoker(_StructuredInvoker):
         return prepared
 
 
-class GroqChatModel:
-    """LangChain-compatible Groq model enforcing strict JSON Schema output."""
+class OllamaChatModel:
+    """LangChain-compatible Ollama Cloud model enforcing strict JSON Schema output."""
 
     def __init__(self, settings: Settings):
-        settings.require_groq_credentials()
+        settings.require_ollama_credentials()
         self.model = settings.chat_model
         self.max_retries = settings.provider_max_retries
-        self.json_object_mode = "ollama.com" in settings.groq_base_url.lower()
+        self.json_object_mode = "ollama.com" in settings.ollama_base_url.lower()
         pricing = _pricing_for(settings.chat_model)
         self.usage = TokenUsage(
             model=settings.chat_model,
@@ -405,8 +405,8 @@ class GroqChatModel:
         )
         self._model = ChatOpenAI(
             model=settings.chat_model,
-            api_key=settings.groq_api_key,
-            base_url=settings.groq_base_url,
+            api_key=settings.ollama_api_key,
+            base_url=settings.ollama_base_url,
             temperature=0,
             timeout=settings.request_timeout,
             max_retries=0,
@@ -492,21 +492,21 @@ class CloudflareEmbeddings:
         return self._embed([text])[0]
 
 
-def create_chat_model(settings: Settings) -> GroqChatModel:
-    return GroqChatModel(settings)
+def create_chat_model(settings: Settings) -> OllamaChatModel:
+    return OllamaChatModel(settings)
 
 
 def create_embedder(settings: Settings) -> CloudflareEmbeddings:
     return CloudflareEmbeddings(settings)
 
 
-def check_groq(settings: Settings) -> str:
-    if not settings.groq_api_key.strip():
+def check_ollama(settings: Settings) -> str:
+    if not settings.ollama_api_key.strip():
         return "unavailable"
     try:
         response = httpx.get(
-            f"{settings.groq_base_url.rstrip('/')}/models",
-            headers={"Authorization": f"Bearer {settings.groq_api_key}"},
+            f"{settings.ollama_base_url.rstrip('/')}/models",
+            headers={"Authorization": f"Bearer {settings.ollama_api_key}"},
             timeout=2,
         )
         if not response.is_success:

@@ -1,4 +1,4 @@
-"""Diagnostic without Groq: simulate intent + run catalogue search only."""
+"""Diagnostic without Ollama Cloud: simulate intent + run catalogue search only."""
 
 from __future__ import annotations
 

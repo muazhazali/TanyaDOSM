@@ -7,7 +7,7 @@ Natural-language analytics assistant for 5 curated DOSM datasets. FastAPI + Lang
 - Python **must be 3.14.x** (`requires-python = ">=3.14,<3.15"`); the package rejects other interpreters.
 - Frontend: Node 24 + **pnpm 10.15.0 via Corepack**. Lockfile is `frontend/pnpm-lock.yaml` — never generate npm/Yarn lockfiles.
 - Python deps via `uv` (`uv.lock`). Run everything with `uv run ...`; do not activate `.venv`.
-- `.env` (from `.env.example`) needs `ASKDOSM_GROQ_API_KEY`; Cloudflare vars are optional (falls back to lexical search).
+- `.env` (from `.env.example`) needs `ASKDOSM_OLLAMA_API_KEY`; Cloudflare vars are optional (falls back to lexical search).
 
 ## Commands
 
@@ -26,7 +26,7 @@ pnpm --dir frontend test / typecheck / lint / build
 ```
 
 - Frontend `build` runs `tsc -b` first — type errors fail the build.
-- Live tests are opt-in and hit real DOSM/Groq/Cloudflare: `$env:ASKDOSM_RUN_LIVE_TESTS="1"; uv run pytest -m integration`.
+- Live tests are opt-in and hit real DOSM/Ollama Cloud/Cloudflare: `$env:ASKDOSM_RUN_LIVE_TESTS="1"; uv run pytest -m integration`.
 - `uv run python evals/evaluate.py` validates the 50-question benchmark structure; live scoring is intentionally not wired in (costs API calls).
 
 ## Architecture invariants (do not break)
@@ -45,4 +45,4 @@ Project is branded **TanyaDOSM**, but the Python package is `askdosm`, env vars 
 ## Other notes
 
 - `.askdosm-cache/` holds dataset Parquet caches, catalogue-monitor state, and the runs SQLite DB; it is runtime state, not source. The `.pytest-tmp-*` directories at the repo root are leftovers from test runs and can be deleted.
-- Deployment: systemd unit at `deploy/tanyadosm.service`; needs only outbound HTTPS to `api.groq.com` / `api.cloudflare.com` (no GPU/Ollama).
+- Deployment: systemd unit at `deploy/tanyadosm.service`; needs only outbound HTTPS to `api.ollama.com` / `api.cloudflare.com` (no GPU).

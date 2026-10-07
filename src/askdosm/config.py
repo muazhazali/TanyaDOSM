@@ -11,8 +11,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_prefix="ASKDOSM_", extra="ignore")
 
     chat_model: str = "openai/gpt-oss-20b"
-    groq_api_key: str = ""
-    groq_base_url: str = "https://api.groq.com/openai/v1"
+    ollama_api_key: str = ""
+    ollama_base_url: str = "https://ollama.com/v1"
     embedding_model: str = "@cf/baai/bge-m3"
     cloudflare_account_id: str = ""
     cloudflare_api_token: str = ""
@@ -34,9 +34,9 @@ class Settings(BaseSettings):
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
-    def require_groq_credentials(self) -> None:
-        if not self.groq_api_key.strip():
-            raise RuntimeError("ASKDOSM_GROQ_API_KEY is required")
+    def require_ollama_credentials(self) -> None:
+        if not self.ollama_api_key.strip():
+            raise RuntimeError("ASKDOSM_OLLAMA_API_KEY is required")
 
 
 def get_settings() -> Settings:

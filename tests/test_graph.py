@@ -25,6 +25,7 @@ class FakeRunnable:
 class FakeLLM:
     def __init__(self, intent, plan):
         self.values = {QuestionIntent: intent, QueryPlan: plan}
+        self.usage = None
 
     def with_structured_output(self, schema):
         return FakeRunnable(self.values[schema])
@@ -147,6 +148,8 @@ def test_malay_minimum_answer_names_the_matching_state(tmp_path):
 
 def test_service_resolves_follow_up_with_bounded_structured_context():
     class ResolverLLM:
+        usage = None
+
         def with_structured_output(self, schema):
             assert schema is ContextResolution
             return FakeRunnable(ContextResolution(

@@ -104,7 +104,7 @@ def test_follow_up_rejects_unknown_conversation(tmp_path):
 
 
 def test_health_reports_hosted_providers(tmp_path, monkeypatch):
-    monkeypatch.setattr("askdosm.api.app.check_groq", lambda settings: "ready")
+    monkeypatch.setattr("askdosm.api.app.check_ollama", lambda settings: "ready")
     monkeypatch.setattr("askdosm.api.app.check_cloudflare", lambda settings: "unavailable")
     app = create_app(api_settings(tmp_path), service_factory=FakeService)
 
@@ -160,11 +160,11 @@ async def test_manager_cancels_a_queued_run(tmp_path):
     assert cancelled.status == RunStatus.INTERRUPTED
 
 
-def test_default_app_rejects_missing_groq_key_at_startup(tmp_path):
-    settings = api_settings(tmp_path).model_copy(update={"groq_api_key": ""})
+def test_default_app_rejects_missing_ollama_key_at_startup(tmp_path):
+    settings = api_settings(tmp_path).model_copy(update={"ollama_api_key": ""})
     app = create_app(settings)
 
-    with pytest.raises(RuntimeError, match="ASKDOSM_GROQ_API_KEY"):
+    with pytest.raises(RuntimeError, match="ASKDOSM_OLLAMA_API_KEY"):
         with TestClient(app):
             pass
 

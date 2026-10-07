@@ -12,8 +12,8 @@ from askdosm.models import QueryPlan, QuestionIntent
 def provider_settings(**updates) -> Settings:
     values = {
         "chat_model": "openai/gpt-oss-20b",
-        "groq_api_key": "groq-test-key",
-        "groq_base_url": "https://api.groq.com/openai/v1",
+        "ollama_api_key": "ollama-test-key",
+        "ollama_base_url": "https://ollama.com/v1",
         "embedding_model": "@cf/baai/bge-m3",
         "cloudflare_account_id": "account-id",
         "cloudflare_api_token": "cloudflare-test-token",
@@ -23,7 +23,7 @@ def provider_settings(**updates) -> Settings:
     return Settings(**values)
 
 
-def test_groq_uses_strict_json_schema(monkeypatch):
+def test_ollama_uses_strict_json_schema(monkeypatch):
     observed = {}
 
     class FakeRunnable:
@@ -40,11 +40,11 @@ def test_groq_uses_strict_json_schema(monkeypatch):
             return FakeRunnable()
 
     monkeypatch.setattr(providers, "ChatOpenAI", FakeChatOpenAI)
-    model = providers.GroqChatModel(provider_settings())
+    model = providers.OllamaChatModel(provider_settings(ollama_base_url="https://api.example.com/v1"))
     result = model.with_structured_output(QuestionIntent).invoke([("human", "population")])
 
     assert result.metric == "population"
-    assert observed["init"]["base_url"] == "https://api.groq.com/openai/v1"
+    assert observed["init"]["base_url"] == "https://api.example.com/v1"
     assert observed["init"]["max_retries"] == 0
     assert observed["init"]["reasoning_effort"] == "low"
     assert observed["schema"]["name"] == "QuestionIntent"
@@ -56,7 +56,7 @@ def test_groq_uses_strict_json_schema(monkeypatch):
     assert observed["structured"] == {"method": "json_schema", "strict": True}
 
 
-def test_groq_schema_collapses_nullable_enum_references():
+def test_ollama_schema_collapses_nullable_enum_references():
     schema = providers._strict_json_schema(QuestionIntent)["schema"]
 
     assert schema["properties"]["requested_output"] == {
@@ -66,7 +66,7 @@ def test_groq_schema_collapses_nullable_enum_references():
     assert schema["properties"]["domain"] == {"type": ["string", "null"]}
 
 
-def test_groq_schema_removes_ambiguous_integer_number_union():
+def test_ollama_schema_removes_ambiguous_integer_number_union():
     schema = providers._strict_json_schema(QueryPlan)["schema"]
     value_schema = schema["$defs"]["FilterSpec"]["properties"]["value"]
 
@@ -84,7 +84,7 @@ def test_groq_schema_removes_ambiguous_integer_number_union():
     assert_no_integer_number_union(value_schema)
 
 
-def test_groq_retries_transient_failures_without_exposing_details(monkeypatch):
+def test_ollama_retries_transient_failures_without_exposing_details(monkeypatch):
     calls = 0
 
     class FakeRunnable:
@@ -92,7 +92,7 @@ def test_groq_retries_transient_failures_without_exposing_details(monkeypatch):
             nonlocal calls
             calls += 1
             if calls < 3:
-                request = httpx.Request("POST", "https://api.groq.com")
+                request = httpx.Request("POST", "https://ollama.com")
                 response = httpx.Response(429, request=request, headers={"retry-after": "0"})
                 raise httpx.HTTPStatusError("secret response", request=request, response=response)
             return QuestionIntent(metric="population")
@@ -104,10 +104,10 @@ def test_groq_retries_transient_failures_without_exposing_details(monkeypatch):
     assert calls == 3
 
 
-def test_groq_authentication_error_is_sanitized():
+def test_ollama_authentication_error_is_sanitized():
     class FakeRunnable:
         def invoke(self, messages, **kwargs):
-            request = httpx.Request("POST", "https://api.groq.com")
+            request = httpx.Request("POST", "https://ollama.com")
             response = httpx.Response(401, request=request)
             raise httpx.HTTPStatusError("contains-sensitive-provider-body", request=request, response=response)
 
@@ -157,6 +157,6 @@ def test_cloudflare_rejects_inconsistent_dimensions():
         embedder.embed_documents(["one", "two"])
 
 
-def test_missing_groq_key_is_rejected():
-    with pytest.raises(RuntimeError, match="ASKDOSM_GROQ_API_KEY"):
-        Settings(groq_api_key="").require_groq_credentials()
+def test_missing_ollama_key_is_rejected():
+    with pytest.raises(RuntimeError, match="ASKDOSM_OLLAMA_API_KEY"):
+        Settings(ollama_api_key="").require_ollama_credentials()
