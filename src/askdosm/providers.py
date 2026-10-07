@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 from copy import deepcopy
 from typing import Any
 
 import httpx
+from langchain_core.messages import AIMessage, BaseMessage, SystemMessage, ToolMessage
+from langchain_core.exceptions import OutputParserException
 from langchain_openai import ChatOpenAI
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from askdosm.config import Settings
 
@@ -107,12 +110,19 @@ class _StructuredInvoker:
         self.output_schema = output_schema
 
     def invoke(self, messages: Any):
+        def single(current_messages: Any):
+            result = self.runnable.invoke(current_messages)
+            if self.output_schema is not None and not isinstance(result, self.output_schema):
+                result = self.output_schema.model_validate(result)
+            return result
+
+        return self._run(single, messages)
+
+    def _run(self, single, messages: Any):
         for attempt in range(self.max_retries + 1):
             started = time.perf_counter()
             try:
-                result = self.runnable.invoke(messages)
-                if self.output_schema is not None and not isinstance(result, self.output_schema):
-                    result = self.output_schema.model_validate(result)
+                result = single(messages)
                 logger.info(
                     "hosted_provider_request provider=groq model=%s latency_ms=%.2f retry_count=%d status=success",
                     self.model,
@@ -122,7 +132,7 @@ class _StructuredInvoker:
                 return result
             except Exception as exc:
                 status = _status_code(exc)
-                transient = _is_transient(exc)
+                transient = _is_transient(exc) or isinstance(exc, OutputParserException)
                 logger.warning(
                     "hosted_provider_request provider=groq model=%s latency_ms=%.2f retry_count=%d status=failed http_status=%s transient=%s",
                     self.model,
@@ -147,6 +157,181 @@ class _StructuredInvoker:
         raise HostedProviderError("Hosted language model is temporarily unavailable.")
 
 
+def _extract_json_text(text: str) -> str:
+    """Pull a JSON object out of prose or fences when a model ignores json_mode."""
+    stripped = text.strip()
+    if "```" in stripped:
+        for segment in stripped.split("```"):
+            candidate = segment.strip()
+            if candidate.startswith("json"):
+                candidate = candidate[4:].strip()
+            if candidate.startswith("{"):
+                stripped = candidate
+                break
+    start = stripped.find("{")
+    end = stripped.rfind("}")
+    if start != -1 and end > start:
+        stripped = stripped[start : end + 1]
+    return stripped
+
+
+def _convert_message(message: Any) -> BaseMessage:
+    from langchain_core.messages import HumanMessage
+
+    if isinstance(message, BaseMessage):
+        return message.model_copy()
+    if isinstance(message, tuple) and len(message) == 2:
+        role, text = message
+        normalized = str(role).lower()
+        content = str(text)
+        if normalized in {"assistant", "ai"}:
+            return AIMessage(content=content)
+        if normalized == "system":
+            return SystemMessage(content=content)
+        if normalized == "tool":
+            return ToolMessage(content=content, tool_call_id="legacy")
+        return HumanMessage(content=content)
+    if isinstance(message, str):
+        return HumanMessage(content=message)
+    return message
+
+
+def _json_object_instructions(schema: type[BaseModel]) -> str:
+    """Compact field-level guidance for providers that lack json_schema support."""
+
+    def resolve(spec: dict[str, Any]) -> dict[str, Any]:
+        if not isinstance(spec, dict):
+            return {}
+        ref = spec.get("$ref")
+        if isinstance(ref, str) and ref.startswith("#/$defs/"):
+            resolved = dict(schema_dict.get("$defs", {}).get(ref.removeprefix("#/$defs/"), {}))
+            resolved.update({key: value for key, value in spec.items() if key != "$ref"})
+            return resolved
+        return spec
+
+    def describe(raw_property_spec: dict[str, Any]) -> tuple[str, bool]:
+        spec = resolve(raw_property_spec)
+        branches = spec.get("anyOf")
+        if isinstance(branches, list) and branches:
+            resolved_branches = [resolve(branch) for branch in branches]
+            types = [str(branch.get("type")) for branch in resolved_branches if branch.get("type") not in (None, "null")]
+            kind = types[0] if types else "object"
+            nullable = any(branch.get("type") == "null" for branch in resolved_branches)
+            return kind, nullable
+        kinds = spec.get("type")
+        if isinstance(kinds, list):
+            non_null = [kind for kind in kinds if kind != "null"]
+            return str(non_null[0] if non_null else "object"), "null" in kinds
+        if isinstance(kinds, str):
+            return kinds, False
+        if spec.get("enum"):
+            return "string", False
+        return "object", False
+
+    def enum_values(raw_property_spec: dict[str, Any]) -> list | None:
+        spec = resolve(raw_property_spec)
+        if spec.get("enum"):
+            return list(spec["enum"])
+        values: list = []
+        for branch in spec.get("anyOf") or []:
+            branch_spec = resolve(branch)
+            values.extend(value for value in (branch_spec.get("enum") or []) if value is not None)
+        return values or None
+
+    schema_dict = schema.model_json_schema()
+    lines = ["Respond with a single JSON object of type " + schema.__name__ + "."]
+    required = set(schema_dict.get("required", []))
+    for name, raw_property_spec in schema_dict.get("properties", {}).items():
+        spec = resolve(raw_property_spec)
+        kind, nullable = describe(raw_property_spec)
+        marker = "required" if name in required else "optional"
+        line = f'- "{name}" ({marker}; {kind}{" or null" if nullable else ""}'
+        enum = enum_values(raw_property_spec)
+        if enum:
+            line += "; must be one of " + json.dumps(enum, default=str)
+        line += ")"
+        description = spec.get("description")
+        if description:
+            line += f": {description}"
+        lines.append(line)
+    for nested, nested_spec in (schema_dict.get("$defs") or {}).items():
+        nested_props = (nested_spec or {}).get("properties", {})
+        if nested_props:
+            lines.append(f'- "{nested}" values have fields: ' + ", ".join(f'"{key}"' for key in nested_props))
+            for key, raw_prop_spec in nested_props.items():
+                prop_spec = resolve(raw_prop_spec)
+                enum = enum_values(raw_prop_spec)
+                kind, nullable = describe(raw_prop_spec)
+                line = f'  - "{key}" ({kind}{" or null" if nullable else ""}'
+                if enum:
+                    line += "; must be one of " + json.dumps(enum, default=str)
+                line += ")"
+                lines.append(line)
+    lines.append("Use null only for fields marked optional with 'or null'. Never invent new field names.")
+    lines.append("Return only the JSON object with no markdown, comments, or extra text.")
+    return "\n".join(lines)
+
+
+class _StructuredJsonInvoker(_StructuredInvoker):
+    """json_mode wrapper: injects schema guidance, parses and validates raw JSON output."""
+
+    def __init__(
+        self,
+        runnable: Any,
+        model: str,
+        max_retries: int,
+        output_schema: type[BaseModel],
+        instructions: str,
+    ):
+        super().__init__(runnable, model, max_retries, output_schema)
+        self.instructions = instructions
+
+    def invoke(self, messages: Any):
+        prepared = self._prepare(messages)
+
+        def single(prepared_messages: list):
+            raw = self.runnable.invoke(prepared_messages)
+            if isinstance(raw, self.output_schema):
+                return raw
+            if isinstance(raw, BaseModel):
+                return self.output_schema.model_validate(raw.model_dump())
+            text = raw.content if isinstance(raw, AIMessage) else str(raw)
+            if not isinstance(text, str):
+                text = "".join(part for part in text if isinstance(part, str))
+            parsed_raw = json.loads(_extract_json_text(text))
+            # Some models envelope the payload under the schema/class name.
+            if isinstance(parsed_raw, dict) and len(parsed_raw) == 1:
+                inner_key = next(iter(parsed_raw))
+                inner = parsed_raw[inner_key]
+                if isinstance(inner, dict) and inner:
+                    parsed_raw = inner
+            try:
+                return self.output_schema.model_validate(parsed_raw)
+            except ValidationError as exc:
+                raise OutputParserException(f"Model JSON did not match {self.output_schema.__name__}.") from exc
+
+        return self._run(single, prepared)
+
+    def _prepare(self, messages: Any) -> list:
+        prepared: list = []
+        injected = False
+        for message in list(messages):
+            converted = _convert_message(message)
+            if (
+                not injected
+                and isinstance(converted.content, str)
+                and converted.content.strip()
+                and not isinstance(converted, ToolMessage)
+                and not isinstance(converted, SystemMessage)
+            ):
+                converted.content = f"{converted.content}\n\n{self.instructions}"
+                injected = True
+            prepared.append(converted)
+        if not injected:
+            prepared.insert(0, SystemMessage(content=self.instructions))
+        return prepared
+
+
 class GroqChatModel:
     """LangChain-compatible Groq model enforcing strict JSON Schema output."""
 
@@ -154,6 +339,7 @@ class GroqChatModel:
         settings.require_groq_credentials()
         self.model = settings.chat_model
         self.max_retries = settings.provider_max_retries
+        self.json_object_mode = "ollama.com" in settings.groq_base_url.lower()
         self._model = ChatOpenAI(
             model=settings.chat_model,
             api_key=settings.groq_api_key,
@@ -162,9 +348,16 @@ class GroqChatModel:
             timeout=settings.request_timeout,
             max_retries=0,
             reasoning_effort="low",
+            max_tokens=4000,
         )
 
     def with_structured_output(self, schema: type):
+        if self.json_object_mode:
+            # Ollama Cloud's OpenAI endpoint accepts json_schema but silently
+            # ignores it; json_object mode is the only enforced variant.
+            instructions = _json_object_instructions(schema)
+            runnable = self._model.with_structured_output(schema, method="json_mode")
+            return _StructuredJsonInvoker(runnable, self.model, self.max_retries, schema, instructions)
         strict_schema = _strict_json_schema(schema)
         runnable = self._model.with_structured_output(strict_schema, method="json_schema", strict=True)
         return _StructuredInvoker(runnable, self.model, self.max_retries, schema)

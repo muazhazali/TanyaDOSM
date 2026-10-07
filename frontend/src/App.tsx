@@ -246,11 +246,11 @@ export default function App() {
   const [elapsed, setElapsed] = useState(0)
   const endRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const conversations = useQuery({ queryKey: ['conversations'], queryFn: api.listConversations, refetchInterval: 5000, enabled: !sharedRunId })
-  const health = useQuery({ queryKey: ['health'], queryFn: api.health, refetchInterval: 30000, retry: false })
+  const conversations = useQuery({ queryKey: ['conversations'], queryFn: api.listConversations, refetchInterval: () => { const run = queryClient.getQueryData<RunSnapshot>(['run', selectedId]); return run && ['queued', 'running'].includes(run.status) ? 5000 : 30000 }, refetchIntervalInBackground: false, enabled: !sharedRunId })
+  const health = useQuery({ queryKey: ['health'], queryFn: api.health, refetchInterval: 30000, refetchIntervalInBackground: false, retry: false })
   const datasets = useQuery({ queryKey: ['datasets'], queryFn: api.datasets, staleTime: 5 * 60 * 1000 })
-  const selected = useQuery({ queryKey: ['run', selectedId], queryFn: () => api.getRun(selectedId!), enabled: !!selectedId, refetchInterval: (query) => (query.state.error && isNotFound(query.state.error) ? false : selectedId ? 1000 : false), retry: false })
-  const conversation = useQuery({ queryKey: ['conversation', conversationId], queryFn: () => api.getConversation(conversationId!), enabled: !!conversationId && !sharedRunId, refetchInterval: (query) => (query.state.error && isNotFound(query.state.error) ? false : conversationId ? 1000 : false), retry: false })
+  const selected = useQuery({ queryKey: ['run', selectedId], queryFn: () => api.getRun(selectedId!), enabled: !!selectedId, refetchInterval: (query) => (query.state.error && isNotFound(query.state.error) ? false : selectedId && ['queued', 'running'].includes(query.state.data?.status ?? '') ? 5000 : false), retry: false })
+  const conversation = useQuery({ queryKey: ['conversation', conversationId], queryFn: () => api.getConversation(conversationId!), enabled: !!conversationId && !sharedRunId, refetchInterval: (query) => (query.state.error && isNotFound(query.state.error) ? false : conversationId && ['queued', 'running'].includes(query.state.data?.turns.at(-1)?.status ?? '') ? 5000 : false), retry: false })
 
   useEffect(() => { if (conversationId) localStorage.setItem('tanyadosm-active-conversation', conversationId); else localStorage.removeItem('tanyadosm-active-conversation') }, [conversationId])
   useEffect(() => {
@@ -274,6 +274,9 @@ export default function App() {
     if (!selectedId) return
     return subscribeToRun(selectedId, (event) => {
       dispatch({ type: 'event', event })
+      if (event.type === 'run.started' || event.type === 'run.queued') {
+        void queryClient.invalidateQueries({ queryKey: ['run', selectedId] })
+      }
       if (['run.completed', 'run.failed'].includes(event.type)) {
         void queryClient.invalidateQueries({ queryKey: ['run', selectedId] })
         void queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] })

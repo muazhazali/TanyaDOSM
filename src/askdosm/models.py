@@ -8,6 +8,18 @@ from typing import Any, Literal, TypeAlias
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 
+def _drop_nulls(values: Any) -> Any:
+    """Strip ``None`` values so Pydantic applies field defaults.
+
+    Hosted models (notably Ollama Cloud's gpt-oss) emit ``null`` for fields
+    they leave unset, even when the schema marks them non-optional with a
+    default. Removing those keys lets Pydantic substitute the default.
+    """
+    if isinstance(values, dict):
+        return {key: value for key, value in values.items() if value is not None}
+    return values
+
+
 class Language(StrEnum):
     EN = "en"
     MS = "ms"
@@ -55,6 +67,11 @@ class QuestionIntent(BaseModel):
     ambiguous: bool = False
     clarification: str | None = None
     multi_dataset: bool = False
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_nulls(cls, values: Any) -> Any:
+        return _drop_nulls(values)
 
 
 class MeasureDefinition(BaseModel):
@@ -123,6 +140,11 @@ class QueryPlan(BaseModel):
     sort: Literal["asc", "desc"] | None = None
     limit: int | None = Field(default=None, ge=1, le=100)
 
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_nulls(cls, values: Any) -> Any:
+        return _drop_nulls(values)
+
     @model_validator(mode="after")
     def metric_must_be_selected(self) -> "QueryPlan":
         if self.metric not in self.columns:
@@ -145,6 +167,11 @@ class ValidationResult(BaseModel):
     status: Literal["valid", "invalid_query", "wrong_dataset", "unsupported"]
     errors: list[str] = Field(default_factory=list)
     retry_action: Literal["search_catalogue", "build_query_plan", "graceful_failure"] | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_nulls(cls, values: Any) -> Any:
+        return _drop_nulls(values)
 
 
 class VisualizationSpec(BaseModel):
