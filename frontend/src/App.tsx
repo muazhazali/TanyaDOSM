@@ -1,9 +1,17 @@
 import { lazy, Suspense, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, BarChart3, BookOpen, Check, ChevronDown, Circle, Clock3, Copy, Database, Download, ExternalLink, Lightbulb, LoaderCircle, Menu, MoreHorizontal, Pencil, RefreshCw, Search, Send, Share2, Sparkles, ThumbsDown, ThumbsUp, Trash2, X } from 'lucide-react'
+import { AlertCircle, BarChart3, BookOpen, ChartLine, Check, ChevronDown, Circle, Clock3, Copy, Database, Download, ExternalLink, Lightbulb, LoaderCircle, Menu, MoreHorizontal, Pencil, RefreshCw, Search, Send, Share2, Sparkles, ThumbsDown, ThumbsUp, Trash2, TrendingUp, X } from 'lucide-react'
 import { api, ApiError, subscribeToRun } from './api'
 import { initialStreamState, latestArtifact, streamReducer } from './runState'
 import type { AnswerPayload, DatasetDefinition, RunEvent, RunSnapshot, RunStatus, TokenUsage } from './types'
+
+type ChartKindOverride = 'bar' | 'line' | 'ranking_bar'
+
+const chartKindOptions: Array<{ kind: ChartKindOverride; label: string; icon: typeof BarChart3 }> = [
+  { kind: 'bar', label: 'Column', icon: BarChart3 },
+  { kind: 'line', label: 'Line', icon: ChartLine },
+  { kind: 'ranking_bar', label: 'Ranking', icon: TrendingUp },
+]
 
 function isNotFound(error: unknown): boolean {
   return error instanceof ApiError && error.status === 404
@@ -202,6 +210,8 @@ function QuestionTips() {
 function Results({ answer, runId, question, onFollowUp }: { answer: AnswerPayload; runId: string; question: string; onFollowUp?: (value: string) => void }) {
   const [copied, setCopied] = useState<'answer' | 'link' | null>(null)
   const [feedback, setFeedback] = useState<boolean | null>(null)
+  const [chartKind, setChartKind] = useState<ChartKindOverride | null>(null)
+  useEffect(() => { setChartKind(null) }, [runId])
   const feedbackMutation = useMutation({ mutationFn: (helpful: boolean) => api.saveFeedback(runId, helpful) })
   const headline = headlineValue(answer)
   const rowsUsed = Number(answer.trace.rows_used ?? answer.table_rows.length)
@@ -221,7 +231,26 @@ function Results({ answer, runId, question, onFollowUp }: { answer: AnswerPayloa
       {!answer.error && answer.source && <p className="mt-3 flex items-center gap-1.5 text-xs text-emerald-700"><Check size={13} /> From official data · {answer.source.agency}{(answer.sources?.length ?? 0) > 1 ? ` and ${answer.sources!.length - 1} more` : ''}</p>}
       {!answer.error && (answer.assumptions?.length ?? 0) > 0 && <div className="mt-4 rounded-xl border border-slate-200 bg-white/70 p-3 text-xs text-slate-600"><p className="flex items-center gap-1.5 font-semibold text-slate-700"><Lightbulb size={13} className="text-amber-500" /> What I assumed</p><ul className="mt-1 list-disc space-y-0.5 pl-4">{answer.assumptions!.map((item) => <li key={item}>{item}</li>)}</ul></div>}
     </div>
-    {showChart && <Suspense fallback={<div className="h-80 animate-pulse rounded-2xl bg-slate-100" aria-label="Loading chart" />}><ResultChart answer={answer} /></Suspense>}
+    {showChart && <Suspense fallback={<div className="h-80 animate-pulse rounded-2xl bg-slate-100" aria-label="Loading chart" />}>
+      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Chart type</span>
+          <div role="group" aria-label="Choose chart type" className="flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
+            {chartKindOptions.map(({ kind, label, icon: Icon }) => (
+              <button
+                key={kind}
+                aria-pressed={(chartKind ?? answer.visualization.kind) === kind}
+                onClick={() => setChartKind(kind)}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${chartKind === kind ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-emerald-200' : 'text-slate-500 hover:text-slate-800'}`}
+              >
+                <Icon size={14} aria-hidden="true" /> {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <ResultChart answer={answer} kindOverride={chartKind ?? undefined} />
+      </div>
+    </Suspense>}
     <ResultTable answer={answer} />
     {answer.source && <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
       <div className="mb-2 flex items-center gap-2 font-semibold text-slate-800"><Database size={16} /> Official source{(answer.sources?.length ?? 0) > 1 ? 's' : ''}</div>
