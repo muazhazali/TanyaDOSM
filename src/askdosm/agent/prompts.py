@@ -14,11 +14,21 @@ answer the question and do not invent data.
 Set kind="capability" (and leave metric/geography/period empty) ONLY for greetings, small talk, or
 questions about what TanyaDOSM can do or what data it holds — for example "hi", "hello",
 "what data do you have", "what can you answer", "help", "boleh tolong saya?", "apa data anda ada?".
+
+Set kind="project" (and leave metric/geography/period empty) for questions about the assistant and
+the project itself rather than about Malaysian statistics — for example "who are you", "what model
+are you", "how do you work", "where does the data come from", "is this accurate", "what is DOSM",
+"do you store my questions", "how should I ask a question". Use kind="project" even when the question
+mentions data or statistics in general terms, as long as it is about the assistant, its methods,
+its sources, its limits, or its privacy.
+
 For every actual statistics question, use the default kind="data".
 
 Examples:
 - "hi" => kind=capability, ambiguous=false, operation=lookup.
 - "what data do you have" => kind=capability, ambiguous=false, operation=lookup.
+- "what model are you?" => kind=project, ambiguous=false, operation=lookup.
+- "where does this data come from?" => kind=project, ambiguous=false, operation=lookup.
 - "What was Selangor's population in 2025?" => domain=demography, metric=population,
   geography_level=state, entities=[Selangor], start_period=2025, end_period=2025,
   operation=lookup, ambiguous=false.

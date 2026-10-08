@@ -32,6 +32,7 @@ def _artifact_event(node_name: str, update: dict[str, Any]) -> dict[str, Any] | 
         "generate_visualization": ("visualization", "visualization"),
         "generate_response": ("result", "answer"),
         "answer_capability": ("result", "answer"),
+        "answer_project": ("result", "answer"),
         "graceful_failure": ("result", "answer"),
     }
     if node_name == "select_dataset":
@@ -123,6 +124,7 @@ def build_graph(services: NodeServices):
     graph.add_node("parse_question", _observed_node("parse_question", nodes.parse_question, services))
     graph.add_node("search_catalogue", _observed_node("search_catalogue", nodes.search_catalogue, services))
     graph.add_node("answer_capability", _observed_node("answer_capability", nodes.answer_capability, services))
+    graph.add_node("answer_project", _observed_node("answer_project", nodes.answer_project, services))
     graph.add_node("select_dataset", _observed_node("select_dataset", nodes.select_dataset, services))
     graph.add_node("inspect_schema", _observed_node("inspect_schema", nodes.inspect_schema, services))
     graph.add_node("build_query_plan", _observed_node("build_query_plan", nodes.build_query_plan, services))
@@ -136,8 +138,16 @@ def build_graph(services: NodeServices):
     graph.add_edge(START, "parse_question")
     graph.add_conditional_edges(
         "parse_question",
-        lambda state: "answer_capability" if state["intent"].kind == IntentKind.CAPABILITY else "search_catalogue",
-        {"answer_capability": "answer_capability", "search_catalogue": "search_catalogue"},
+        lambda state: (
+            "answer_capability" if state["intent"].kind == IntentKind.CAPABILITY
+            else "answer_project" if state["intent"].kind == IntentKind.PROJECT
+            else "search_catalogue"
+        ),
+        {
+            "answer_capability": "answer_capability",
+            "answer_project": "answer_project",
+            "search_catalogue": "search_catalogue",
+        },
     )
     graph.add_edge("search_catalogue", "select_dataset")
     graph.add_conditional_edges(
@@ -173,6 +183,7 @@ def build_graph(services: NodeServices):
     graph.add_edge("generate_visualization", "generate_response")
     graph.add_edge("generate_response", END)
     graph.add_edge("answer_capability", END)
+    graph.add_edge("answer_project", END)
     graph.add_edge("graceful_failure", END)
     return graph.compile()
 
@@ -193,6 +204,7 @@ class TanyaDOSMService:
             max_retries=self.settings.max_retries,
             min_match_score=self.settings.min_match_score,
             clarification_gap=self.settings.clarification_gap,
+            assistant_facts_path=self.settings.assistant_facts_path,
         )
         self.graph = build_graph(services)
         self.llm = llm

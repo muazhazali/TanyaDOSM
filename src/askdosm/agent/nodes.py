@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Protocol
 
 import pandas as pd
@@ -46,6 +47,7 @@ class NodeServices:
     max_retries: int = 2
     min_match_score: float = 0.10
     clarification_gap: float = 0.03
+    assistant_facts_path: Any = None
 
 
 def parse_question(state: AgentState, services: NodeServices) -> dict:
@@ -139,6 +141,65 @@ def answer_capability(state: AgentState, services: NodeServices) -> dict:
         trace=ExecutionTrace(intent=state.get("intent"), token_usage=getattr(services.llm, "usage", None)),
     )
     return {"answer": payload, "final_status": "capability"}
+
+
+def _load_assistant_facts(services: NodeServices) -> list[dict[str, Any]]:
+    path = services.assistant_facts_path
+    if path is None:
+        return []
+    try:
+        raw = json.loads(Path(path).read_text(encoding="utf-8"))
+        return raw.get("facts", []) if isinstance(raw, dict) else []
+    except (OSError, ValueError):
+        return []
+
+
+def _match_fact(question: str, facts: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Pick the curated fact whose alias best matches the question.
+
+    Matching is deterministic and purely lexical: the curated text is what gets
+    shown, so the model never free-generates project facts.
+    """
+    text = f" {re.sub(r'[^\w\s]', ' ', question.casefold())} "
+    words = set(text.split())
+    best: dict[str, Any] | None = None
+    best_score = 0
+    for fact in facts:
+        score = 0
+        for alias in fact.get("aliases", []):
+            alias_cf = alias.casefold().strip()
+            if not alias_cf:
+                continue
+            if alias_cf in text:
+                # Longer phrases are stronger evidence than single words.
+                score = max(score, len(alias_cf.split()) * 2 + 1)
+            elif len(alias_cf.split()) == 1 and alias_cf in words:
+                score = max(score, 1)
+        if score > best_score:
+            best_score = score
+            best = fact
+    return best
+
+
+def answer_project(state: AgentState, services: NodeServices) -> dict:
+    """Answer questions about the assistant/project from curated facts only."""
+    intent = state.get("intent")
+    language = intent.language.value if intent else "en"
+    facts = _load_assistant_facts(services)
+    fact = _match_fact(state["question"], facts)
+    if fact is None:
+        # No curated fact matches: fall back to the catalogue-grounded capability answer.
+        return answer_capability(state, services)
+    answer_text = fact.get("answer_ms" if language == "ms" else "answer_en") or fact.get("answer_en", "")
+    payload = AnswerPayload(
+        answer=answer_text,
+        follow_ups=[
+            "What is Malaysia's latest population?",
+            "What data do you have?",
+        ],
+        trace=ExecutionTrace(intent=intent, token_usage=getattr(services.llm, "usage", None)),
+    )
+    return {"answer": payload, "final_status": "project"}
 
 
 def _infer_assumptions(intent: QuestionIntent, definition: Any) -> list[str]:

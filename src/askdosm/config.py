@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     min_match_score: float = 0.10
     clarification_gap: float = 0.03
     catalogue_path: Path = Path("data/catalogue.json")
+    assistant_facts_path: Path = Path("data/assistant-facts.json")
     run_db_path: Path = Path(".askdosm-cache/runs.sqlite3")
     run_retention_days: int = 7
     max_concurrent_runs: int = 1

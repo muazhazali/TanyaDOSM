@@ -54,6 +54,7 @@ class OutputKind(StrEnum):
 class IntentKind(StrEnum):
     DATA = "data"
     CAPABILITY = "capability"
+    PROJECT = "project"
 
 
 class QuestionIntent(BaseModel):
