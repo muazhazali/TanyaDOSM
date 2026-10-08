@@ -23,6 +23,7 @@ from askdosm.models import (
     CombineHow,
     CombineSpec,
     ComposedAnswer,
+    DatasetDefinition,
     ExecutionTrace,
     IntentKind,
     MultiPlan,
@@ -755,6 +756,87 @@ def _format_value(value: float | int | str | None, unit: str, language: str = "e
     return f"{rendered} {localized_unit}".strip()
 
 
+def _first_numeric(row: dict[str, Any], key: str) -> float | None:
+    value = row.get(key)
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _summary_of_rows(result: AnalysisResult, definition: DatasetDefinition, language: str, metric_display: str) -> str:
+    """Summarise multi-row results deterministically from the returned rows only.
+
+    Never invents values: every figure comes from `result.rows`, and rows with an
+    unparseable metric value are ignored for extreme/average statements.
+    """
+    unit = result.unit
+    metric = result.metric
+    values = [(row, _first_numeric(row, metric)) for row in result.rows]
+    numeric = [(row, value) for row, value in values if value is not None]
+    parts: list[str] = []
+    if language == "ms":
+        parts.append(f"Saya menemui {result.row_count} pemerhatian yang sepadan untuk {metric_display}.")
+    else:
+        parts.append(f"I found {result.row_count} matching observations for {metric_display}.")
+
+    if numeric and len(numeric) >= 2:
+        top_row, top_value = max(numeric, key=lambda pair: pair[1])
+        low_row, low_value = min(numeric, key=lambda pair: pair[1])
+        dates = [str(row.get("date")) for row, _ in numeric if row.get("date")]
+        latest_row: dict[str, Any] | None = None
+        latest_date: str | None = None
+        if dates:
+            latest_date = max(dates)
+            latest_row = next((row for row, _ in numeric if str(row.get("date")) == latest_date), None)
+        entity_columns = [
+            column for column in definition.dimensions
+            if column != "date" and column not in definition.default_filters
+        ]
+
+        def label_for(row: dict[str, Any]) -> str | None:
+            varying = [column for column in entity_columns if len({str(item.get(column)) for item in result.rows}) > 1]
+            wanted = varying or entity_columns
+            return next((str(row[column]) for column in wanted if row.get(column) is not None), None)
+
+        latest_value = _first_numeric(latest_row, metric) if latest_row else None
+        if language == "ms":
+            if entity_columns:
+                top_label, low_label = label_for(top_row), label_for(low_row)
+                if top_label and top_label != low_label:
+                    parts.append(
+                        f"{top_label} mencatatkan nilai tertinggi ({_format_value(top_value, unit, language)}), "
+                        f"manakala {low_label} paling rendah ({_format_value(low_value, unit, language)})."
+                    )
+            if latest_value is not None and latest_date:
+                rendered_date = latest_date[:10]
+                parts.append(f"Nilai terkini pada {rendered_date} ialah {_format_value(latest_value, unit, language)}.")
+            average = sum(value for _, value in numeric) / len(numeric)
+            parts.append(f"Purata ialah {_format_value(average, unit, language)}.")
+        else:
+            if entity_columns:
+                top_label, low_label = label_for(top_row), label_for(low_row)
+                if top_label and top_label != low_label:
+                    parts.append(
+                        f"{top_label} recorded the highest value ({_format_value(top_value, unit, language)}), "
+                        f"while {low_label} was the lowest ({_format_value(low_value, unit, language)})."
+                    )
+            if latest_value is not None and latest_date:
+                rendered_date = latest_date[:10]
+                parts.append(f"The latest value, on {rendered_date}, is {_format_value(latest_value, unit, language)}.")
+            average = sum(value for _, value in numeric) / len(numeric)
+            parts.append(f"The average is {_format_value(average, unit, language)}.")
+    elif numeric:
+        parts.append(_format_value(numeric[0][1], unit, language) + ".")
+
+    parts.append(
+        "Lihat jadual atau carta di bawah." if language == "ms" else "See the table or chart below."
+    )
+    return " ".join(parts)
+
+
 def generate_response(state: AgentState, services: NodeServices) -> dict:
     result = state["analysis_result"]
     definition = state["selected_dataset"]
@@ -816,11 +898,7 @@ def generate_response(state: AgentState, services: NodeServices) -> dict:
             else f"The requested {result.metric} is {_format_value(first.get(result.metric), result.unit)}."
         )
         if result.row_count > 1:
-            answer_text = (
-                f"Saya menemui {result.row_count} pemerhatian yang sepadan untuk {metric_display}. Lihat jadual atau carta di bawah."
-                if language == "ms"
-                else f"I found {result.row_count} matching observations for {result.metric}. See the table or chart below."
-            )
+            answer_text = _summary_of_rows(result, definition, language, metric_display)
     else:
         answer_text = "Tiada pemerhatian yang sepadan ditemui." if language == "ms" else "No matching observations were found."
     periods = [str(row.get("date")) for row in result.rows if row.get("date")]

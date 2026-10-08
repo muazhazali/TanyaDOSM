@@ -218,6 +218,40 @@ def test_malay_minimum_answer_names_the_matching_state(tmp_path):
     assert "paling sedikit" in answer
 
 
+def test_multi_row_answer_summarises_the_rows(tmp_path):
+    catalogue = Catalogue(Path("data/catalogue.json"))
+    intent = QuestionIntent(domain="demography", metric="population", geography_level="state")
+    query_plan = QueryPlan(dataset_id="population_state", columns=["date", "state", "population"], metric="population", operation=Operation.LOOKUP)
+    analysis = AnalysisResult(
+        rows=[
+            {"date": "2024-01-01", "state": "Johor", "population": 4100.0},
+            {"date": "2025-01-01", "state": "Selangor", "population": 7500.0},
+            {"date": "2026-01-01", "state": "Selangor", "population": 7620.5},
+        ],
+        metric="population", unit="thousand people", row_count=3,
+    )
+    services = NodeServices(
+        catalogue=catalogue, cache=FakeCache(pd.DataFrame()), llm=FakeLLM(intent, query_plan),
+        embedder=None, embedding_cache_dir=tmp_path,
+    )
+    state = {
+        "intent": intent,
+        "selected_dataset": catalogue.get("population_state"),
+        "query_plan": query_plan,
+        "analysis_result": analysis,
+        "visualization": VisualizationSpec(),
+        "validation": ValidationResult(valid=True, status="valid"),
+    }
+
+    answer = generate_response(state, services)["answer"].answer
+
+    assert "3 matching observations" in answer
+    assert "highest value (7,620.5 thousand people)" in answer
+    assert "latest value, on 2026-01-01, is 7,620.5 thousand people" in answer
+    assert "The average is" in answer
+    assert "See the table or chart below." in answer
+
+
 def test_service_resolves_follow_up_with_bounded_structured_context():
     class ResolverLLM:
         usage = None
