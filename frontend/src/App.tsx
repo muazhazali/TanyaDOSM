@@ -23,14 +23,16 @@ const nodeLabels: Record<string, string> = {
   inspect_schema: 'Checking the source', build_query_plan: 'Preparing the data request', execute_query: 'Retrieving figures',
   analyze_result: 'Working out the answer', validate_result: 'Checking the result', generate_visualization: 'Preparing the chart',
   generate_response: 'Writing the answer', graceful_failure: 'Preparing a helpful response',
+  plan_multi: 'Planning across datasets', validate_multi: 'Checking the plan', execute_multi: 'Retrieving and combining figures',
+  generate_multi_response: 'Writing the combined answer',
 }
 
 const publicSteps = [
   { label: 'Understanding your question', description: 'Identifying the topic, place and time period.', nodes: ['parse_question'] },
   { label: 'Finding the right official data', description: 'Matching your question with a curated DOSM dataset.', nodes: ['search_catalogue', 'select_dataset'] },
-  { label: 'Checking the source', description: 'Confirming the available fields and data freshness.', nodes: ['inspect_schema'] },
-  { label: 'Working out the answer', description: 'Retrieving, calculating and checking the figures.', nodes: ['build_query_plan', 'execute_query', 'analyze_result', 'validate_result'] },
-  { label: 'Preparing your result', description: 'Presenting the answer and chart clearly.', nodes: ['generate_visualization', 'generate_response', 'graceful_failure'] },
+  { label: 'Checking the source', description: 'Confirming the available fields and data freshness.', nodes: ['inspect_schema', 'plan_multi', 'validate_multi'] },
+  { label: 'Working out the answer', description: 'Retrieving, calculating and checking the figures.', nodes: ['build_query_plan', 'execute_query', 'analyze_result', 'validate_result', 'execute_multi'] },
+  { label: 'Preparing your result', description: 'Presenting the answer and chart clearly.', nodes: ['generate_visualization', 'generate_response', 'generate_multi_response', 'graceful_failure'] },
 ] as const
 
 function StatusPill({ status }: { status: RunStatus }) {
@@ -163,10 +165,14 @@ function Results({ answer, runId, question, onFollowUp }: { answer: AnswerPayloa
     {showChart && <Suspense fallback={<div className="h-80 animate-pulse rounded-2xl bg-slate-100" aria-label="Loading chart" />}><ResultChart answer={answer} /></Suspense>}
     <ResultTable answer={answer} />
     {answer.source && <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-      <div className="mb-2 flex items-center gap-2 font-semibold text-slate-800"><Database size={16} /> Official source</div>
-      <a className="font-medium text-emerald-700 underline" href={answer.source.url} target="_blank" rel="noreferrer">{answer.source.title}</a>
-      <p className="mt-1">{answer.source.agency} · Data date: {formatPeriod(answer.source.period)}</p>
-      <p className="mt-1 text-xs text-slate-500">Unit: {answer.source.unit} · Based on {rowsUsed} verified {rowsUsed === 1 ? 'row' : 'rows'}.</p>
+      <div className="mb-2 flex items-center gap-2 font-semibold text-slate-800"><Database size={16} /> Official source{(answer.sources?.length ?? 0) > 1 ? 's' : ''}</div>
+      <ul className="space-y-2">
+        {(answer.sources?.length ? answer.sources : [answer.source]).map((item) => item && <li key={item.dataset_id}>
+          <a className="font-medium text-emerald-700 underline" href={item.url} target="_blank" rel="noreferrer">{item.title}</a>
+          <p className="mt-0.5">{item.agency} · Data date: {formatPeriod(item.period)}</p>
+        </li>)}
+      </ul>
+      <p className="mt-2 text-xs text-slate-500">Unit: {answer.source.unit} · Based on {rowsUsed} verified {rowsUsed === 1 ? 'row' : 'rows'}.</p>
     </div>}
     {answer.trace?.token_usage && answer.trace.token_usage.total_tokens > 0 && <UsageBadge usage={answer.trace.token_usage} />}
     {!answer.error && <div className="flex flex-wrap items-center gap-2 border-t border-slate-200 pt-4">

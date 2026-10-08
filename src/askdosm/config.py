@@ -25,8 +25,12 @@ class Settings(BaseSettings):
     max_retries: int = 2
     min_match_score: float = 0.10
     clarification_gap: float = 0.03
+    enable_multi_dataset: bool = True
+    max_plan_steps: int = 3
+    max_join_rows: int = 50_000
     catalogue_path: Path = Path("data/catalogue.json")
     assistant_facts_path: Path = Path("data/assistant-facts.json")
+    joins_path: Path = Path("data/joins.json")
     run_db_path: Path = Path(".askdosm-cache/runs.sqlite3")
     run_retention_days: int = 7
     max_concurrent_runs: int = 1

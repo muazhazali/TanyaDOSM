@@ -8,10 +8,12 @@ from askdosm.agent.nodes import NodeServices
 from askdosm.agent.nodes import build_query_plan, generate_response
 from askdosm.catalogue import Catalogue
 from askdosm.models import (
-    AnalysisResult, ContextResolution, FilterSpec, IntentKind, Operation, QueryPlan, QuestionIntent,
+    AnalysisResult, CombineHow, CombineSpec, ContextResolution, FilterSpec, IntentKind,
+    MultiPlan, Operation, PlanStep, QueryPlan, QuestionIntent, StepKind,
     ValidationResult, VisualizationSpec,
 )
 from askdosm.agent.graph import TanyaDOSMService
+from askdosm.catalogue import JoinRegistry
 
 
 class FakeRunnable:
@@ -25,6 +27,15 @@ class FakeRunnable:
 class FakeLLM:
     def __init__(self, intent, plan):
         self.values = {QuestionIntent: intent, QueryPlan: plan}
+        self.usage = None
+
+    def with_structured_output(self, schema):
+        return FakeRunnable(self.values[schema])
+
+
+class MultiFakeLLM:
+    def __init__(self, intent, multi_plan):
+        self.values = {QuestionIntent: intent, MultiPlan: multi_plan}
         self.usage = None
 
     def with_structured_output(self, schema):
@@ -75,7 +86,7 @@ def test_graph_rejects_multi_dataset_question(tmp_path):
     unused_plan = QueryPlan(dataset_id="population_state", columns=["population"], metric="population", operation=Operation.LOOKUP)
     services = NodeServices(
         catalogue=Catalogue(Path("data/catalogue.json")), cache=FakeCache(pd.DataFrame()), llm=FakeLLM(intent, unused_plan),
-        embedder=None, embedding_cache_dir=tmp_path, max_retries=2
+        embedder=None, embedding_cache_dir=tmp_path, max_retries=2, enable_multi_dataset=False,
     )
     state = build_graph(services).invoke({"question": "Compare population and unemployment", "retry_count": 0, "errors": []})
     assert state["answer"].error
@@ -227,3 +238,90 @@ def test_service_resolves_follow_up_with_bounded_structured_context():
     resolved = service.resolve_question("What about Selangor?", history)
 
     assert resolved == "What was Selangor's population in 2025?"
+
+
+def _multi_cache(frames):
+    class _Cache:
+        def load(self, definition):
+            return frames[definition.dataset_id].copy()
+
+        def freshness(self, dataset_id):
+            return "fixture"
+
+    return _Cache()
+
+
+def test_multi_dataset_ratio_is_whitelisted_and_executes(tmp_path):
+    intent = QuestionIntent(multi_dataset=True, metric="gdp", operation=Operation.COMPARE)
+    plan = MultiPlan(
+        steps=[
+            PlanStep(
+                step_id="s1", kind=StepKind.FETCH, dataset_id="gdp_gni_annual_nominal",
+                plan=QueryPlan(
+                    dataset_id="gdp_gni_annual_nominal", columns=["date", "gdp"], metric="gdp",
+                    operation=Operation.LOOKUP,
+                    filters=[FilterSpec(column="date", operator="eq", value="2020-01-01")],
+                ),
+            ),
+            PlanStep(
+                step_id="s2", kind=StepKind.FETCH, dataset_id="population_malaysia",
+                plan=QueryPlan(
+                    dataset_id="population_malaysia", columns=["date", "population"], metric="population",
+                    operation=Operation.LOOKUP,
+                    filters=[FilterSpec(column="date", operator="eq", value="2020-01-01")],
+                ),
+            ),
+            PlanStep(
+                step_id="s3", kind=StepKind.COMBINE,
+                combine=CombineSpec(how=CombineHow.RATIO, left="s1", right="s2", on=["date"],
+                                    left_metric="gdp", right_metric="population"),
+                output_metric="gdp_per_capita",
+            ),
+        ],
+        final_step="s3",
+    )
+    frames = {
+        "gdp_gni_annual_nominal": pd.DataFrame(
+            {"date": pd.to_datetime(["2020-01-01"]), "series": ["gdp"], "gdp": [1342000.0], "gni": [1300000.0]}
+        ),
+        "population_malaysia": pd.DataFrame(
+            {"date": pd.to_datetime(["2020-01-01"]), "sex": ["both"], "age": ["overall"],
+             "ethnicity": ["overall"], "population": [32600.0]}
+        ),
+    }
+    services = NodeServices(
+        catalogue=Catalogue(Path("data/catalogue.json")), cache=_multi_cache(frames),
+        llm=MultiFakeLLM(intent, plan), embedder=None, embedding_cache_dir=tmp_path,
+        joins=JoinRegistry(Path("data/joins.json")), enable_multi_dataset=True, max_plan_steps=3,
+    )
+    state = build_graph(services).invoke({"question": "GDP per capita 2020", "retry_count": 0, "errors": []})
+    assert state["answer"].error is None
+    assert state["final_status"] == "complete"
+    assert len(state["answer"].sources) == 2
+    assert state["answer"].table_rows[0]["gdp_per_capita"] > 0
+
+
+def test_multi_dataset_non_whitelisted_join_is_refused(tmp_path):
+    intent = QuestionIntent(multi_dataset=True, operation=Operation.COMPARE)
+    plan = MultiPlan(
+        steps=[
+            PlanStep(step_id="s1", kind=StepKind.FETCH, dataset_id="population_malaysia",
+                     plan=QueryPlan(dataset_id="population_malaysia", columns=["date", "population"],
+                                    metric="population", operation=Operation.LOOKUP)),
+            PlanStep(step_id="s2", kind=StepKind.FETCH, dataset_id="lfs_month",
+                     plan=QueryPlan(dataset_id="lfs_month", columns=["date", "u_rate"],
+                                    metric="u_rate", operation=Operation.LOOKUP)),
+            PlanStep(step_id="s3", kind=StepKind.COMBINE,
+                     combine=CombineSpec(how=CombineHow.RATIO, left="s1", right="s2", on=["date"],
+                                         left_metric="population", right_metric="u_rate")),
+        ],
+        final_step="s3",
+    )
+    services = NodeServices(
+        catalogue=Catalogue(Path("data/catalogue.json")), cache=FakeCache(pd.DataFrame()),
+        llm=MultiFakeLLM(intent, plan), embedder=None, embedding_cache_dir=tmp_path,
+        joins=JoinRegistry(Path("data/joins.json")), enable_multi_dataset=True, max_plan_steps=3,
+    )
+    state = build_graph(services).invoke({"question": "population per unemployment", "retry_count": 0, "errors": []})
+    assert state["answer"].error
+    assert "whitelisted" in state["answer"].answer

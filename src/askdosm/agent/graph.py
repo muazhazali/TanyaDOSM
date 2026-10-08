@@ -13,7 +13,7 @@ from langgraph.graph import END, START, StateGraph
 from askdosm.agent import nodes
 from askdosm.agent.nodes import NodeServices
 from askdosm.agent.state import AgentState
-from askdosm.catalogue import Catalogue
+from askdosm.catalogue import Catalogue, JoinRegistry
 from askdosm.config import Settings, get_settings
 from askdosm.data import DatasetCache
 from askdosm.models import AnswerPayload, ContextResolution, IntentKind
@@ -33,6 +33,9 @@ def _artifact_event(node_name: str, update: dict[str, Any]) -> dict[str, Any] | 
         "generate_response": ("result", "answer"),
         "answer_capability": ("result", "answer"),
         "answer_project": ("result", "answer"),
+        "plan_multi": ("multi_plan", "multi_plan"),
+        "validate_multi": ("multi_validation", "errors"),
+        "generate_multi_response": ("result", "answer"),
         "graceful_failure": ("result", "answer"),
     }
     if node_name == "select_dataset":
@@ -125,6 +128,10 @@ def build_graph(services: NodeServices):
     graph.add_node("search_catalogue", _observed_node("search_catalogue", nodes.search_catalogue, services))
     graph.add_node("answer_capability", _observed_node("answer_capability", nodes.answer_capability, services))
     graph.add_node("answer_project", _observed_node("answer_project", nodes.answer_project, services))
+    graph.add_node("plan_multi", _observed_node("plan_multi", nodes.plan_multi, services))
+    graph.add_node("validate_multi", _observed_node("validate_multi", nodes.validate_multi, services))
+    graph.add_node("execute_multi", _observed_node("execute_multi", nodes.execute_multi, services))
+    graph.add_node("generate_multi_response", _observed_node("generate_multi_response", nodes.generate_multi_response, services))
     graph.add_node("select_dataset", _observed_node("select_dataset", nodes.select_dataset, services))
     graph.add_node("inspect_schema", _observed_node("inspect_schema", nodes.inspect_schema, services))
     graph.add_node("build_query_plan", _observed_node("build_query_plan", nodes.build_query_plan, services))
@@ -152,9 +159,30 @@ def build_graph(services: NodeServices):
     graph.add_edge("search_catalogue", "select_dataset")
     graph.add_conditional_edges(
         "select_dataset",
-        lambda state: "inspect_schema" if state.get("final_status") == "selected" else "graceful_failure",
-        {"inspect_schema": "inspect_schema", "graceful_failure": "graceful_failure"},
+        lambda state: (
+            "plan_multi"
+            if state["intent"].multi_dataset and services.enable_multi_dataset
+            else "inspect_schema" if state.get("final_status") == "selected"
+            else "graceful_failure"
+        ),
+        {
+            "plan_multi": "plan_multi",
+            "inspect_schema": "inspect_schema",
+            "graceful_failure": "graceful_failure",
+        },
     )
+    graph.add_edge("plan_multi", "validate_multi")
+    graph.add_conditional_edges(
+        "validate_multi",
+        lambda state: "execute_multi" if state.get("final_status") == "multi_validated" else "graceful_failure",
+        {"execute_multi": "execute_multi", "graceful_failure": "graceful_failure"},
+    )
+    graph.add_conditional_edges(
+        "execute_multi",
+        lambda state: "generate_multi_response" if state.get("final_status") == "multi_ready" else "graceful_failure",
+        {"generate_multi_response": "generate_multi_response", "graceful_failure": "graceful_failure"},
+    )
+    graph.add_edge("generate_multi_response", END)
     graph.add_edge("inspect_schema", "build_query_plan")
     graph.add_conditional_edges(
         "build_query_plan",
@@ -205,6 +233,10 @@ class TanyaDOSMService:
             min_match_score=self.settings.min_match_score,
             clarification_gap=self.settings.clarification_gap,
             assistant_facts_path=self.settings.assistant_facts_path,
+            joins=JoinRegistry(self.settings.joins_path),
+            enable_multi_dataset=self.settings.enable_multi_dataset,
+            max_plan_steps=self.settings.max_plan_steps,
+            max_join_rows=self.settings.max_join_rows,
         )
         self.graph = build_graph(services)
         self.llm = llm

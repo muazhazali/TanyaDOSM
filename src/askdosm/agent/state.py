@@ -12,6 +12,7 @@ from askdosm.models import (
     AnswerPayload,
     DatasetCandidate,
     DatasetDefinition,
+    MultiPlan,
     QuestionIntent,
     QueryPlan,
     ValidationResult,
@@ -40,3 +41,6 @@ class AgentState(TypedDict, total=False):
     final_status: str
     metadata: dict[str, Any]
     event_sink: Callable[[dict[str, Any]], None]
+    multi_plan: MultiPlan
+    step_frames: dict[str, Any]
+    step_results: dict[str, Any]

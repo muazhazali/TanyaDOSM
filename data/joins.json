@@ -1,0 +1,53 @@
+{
+  "_comment": "Whitelist of dataset pairs that may be joined or combined. The multi-dataset planner can only join pairs listed here. Keys must be dimensions shared by both datasets with compatible grain.",
+  "pairs": [
+    {
+      "datasets": ["population_malaysia", "gdp_gni_annual_nominal"],
+      "on": ["date"],
+      "grain": "annual-national",
+      "note": "GDP per capita and population-vs-GDP comparisons."
+    },
+    {
+      "datasets": ["population_malaysia", "births_annual"],
+      "on": ["date"],
+      "grain": "annual-national",
+      "note": "Births and population together."
+    },
+    {
+      "datasets": ["population_malaysia", "deaths"],
+      "on": ["date"],
+      "grain": "annual-national",
+      "note": "Deaths and population together."
+    },
+    {
+      "datasets": ["births_annual", "deaths"],
+      "on": ["date"],
+      "grain": "annual-national",
+      "note": "Births and deaths together."
+    },
+    {
+      "datasets": ["population_state", "hh_income_state"],
+      "on": ["date", "state"],
+      "grain": "annual-state",
+      "note": "Population versus household income by state."
+    },
+    {
+      "datasets": ["population_state", "lfs_qtr_state"],
+      "on": ["date", "state"],
+      "grain": "state",
+      "note": "Population versus labour-force indicators by state; align to the same period before combining."
+    },
+    {
+      "datasets": ["cpi_headline_inflation", "lfs_month"],
+      "on": ["date"],
+      "grain": "monthly-national",
+      "note": "Inflation versus national labour-force indicators."
+    },
+    {
+      "datasets": ["cpi_state_inflation", "lfs_qtr_state"],
+      "on": ["date", "state"],
+      "grain": "state",
+      "note": "State inflation versus state labour-force indicators."
+    }
+  ]
+}

@@ -7,7 +7,7 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 import numpy as np
 from pydantic import TypeAdapter
@@ -156,3 +156,37 @@ class Catalogue:
             return (-round(candidate.score, 4), geography_pref, geography_rank, candidate.dataset_id)
 
         return sorted(candidates.values(), key=sort_key)
+
+
+class JoinRegistry:
+    """Whitelist of dataset pairs that may be joined or combined.
+
+    The multi-dataset planner can only reference pairs listed here, which keeps
+    every combination catalogue-validated instead of model-invented.
+    """
+
+    def __init__(self, path: Path):
+        self._pairs: list[dict[str, Any]] = []
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+            self._pairs = raw.get("pairs", []) if isinstance(raw, dict) else []
+        except (OSError, ValueError):
+            self._pairs = []
+
+    def _pair_for(self, left: str, right: str) -> dict[str, Any] | None:
+        for pair in self._pairs:
+            datasets = set(pair.get("datasets", []))
+            if datasets == {left, right}:
+                return pair
+        return None
+
+    def is_allowed(self, left: str, right: str, on: list[str]) -> bool:
+        pair = self._pair_for(left, right)
+        if pair is None:
+            return False
+        allowed_keys = set(pair.get("on", []))
+        return bool(on) and set(on).issubset(allowed_keys)
+
+    def allowed_keys(self, left: str, right: str) -> list[str]:
+        pair = self._pair_for(left, right)
+        return list(pair.get("on", [])) if pair else []

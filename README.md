@@ -43,6 +43,7 @@ uv run uvicorn askdosm.api.app:app --host 127.0.0.1 --port 8000
 TanyaDOSM routes each question to one of three lanes (`QuestionIntent.kind`):
 
 - **Statistics questions** — matched to one curated dataset and answered from data, e.g. *"What was Selangor's population in 2025?"*, *"Show inflation trends in Johor since 2020"*, *"Rank states by unemployment"*.
+- **Multi-dataset questions** — questions that span two subjects are planned as a small declarative DAG and combined with whitelisted joins, e.g. *"GDP per capita"* (GDP ÷ population), *"Compare GDP and inflation"*. Sources for every dataset used are cited.
 - **Capability questions** — greetings and *"what data do you have"* return the list of available domains and an example question.
 - **Project questions** — *"what model are you"*, *"where does the data come from"*, *"is this accurate"*, *"do you store my questions"* are answered strictly from curated facts in `data/assistant-facts.json` (English and Malay). Unmatched project questions fall back to the capability answer rather than guessing.
 
@@ -100,6 +101,11 @@ React/Vite
              -> allow-listed filtering and deterministic calculation
              -> validation with at most two replans
              -> deterministic answer, visualization specification, source, execution trace
+        -> multi-dataset lane (when the question spans two subjects):
+             declarative DAG of fetch/combine steps (no code)
+             -> validated against the catalogue and the join whitelist (data/joins.json)
+             -> deterministic fetch + join/ratio/difference/concat
+             -> combined answer with multiple cited sources
 ```
 
 The LLM cannot generate executable Python or SQL. Dataset IDs, columns, metrics, filters, and operations are checked against `data/catalogue.json`. Population and CPI sources apply default `overall` filters unless the question explicitly asks for a breakdown.
@@ -158,6 +164,9 @@ Invoke-RestMethod -Method Post http://localhost:8000/api/catalogue-monitor/check
 | `ASKDOSM_MAX_QUESTION_LENGTH` | `500` | API question limit |
 | `ASKDOSM_MIN_MATCH_SCORE` | `0.10` | Floor for a plausible dataset match; lower answers more vague questions (with an assumption note) |
 | `ASKDOSM_CLARIFICATION_GAP` | `0.03` | Score gap below which a cross-domain near-tie asks for clarification |
+| `ASKDOSM_ENABLE_MULTI_DATASET` | `true` | Allow questions that combine more than one dataset |
+| `ASKDOSM_MAX_PLAN_STEPS` | `3` | Maximum steps in a multi-dataset plan |
+| `ASKDOSM_MAX_JOIN_ROWS` | `50000` | Row-count guard for a combined result |
 | `ASKDOSM_CORS_ORIGINS` | local Vite origins | Comma-separated development origins |
 
 Project questions are answered from `data/assistant-facts.json` (path configurable as `assistant_facts_path`). Add entries there (aliases + English/Malay text) to extend what the assistant can say about itself — no code change required.
@@ -196,7 +205,8 @@ The benchmark in `evals/questions.json` contains 50 cases. `evals/evaluate.py` v
 
 ## Data interpretation and limitations
 
-- Only one registered dataset may be used per question; multi-dataset joins are out of scope.
+- Only whitelisted dataset pairs may be combined (see `data/joins.json`); other multi-dataset joins are out of scope. At most three plan steps per question.
+- Forecasting, causal claims, general knowledge, user accounts, and production-grade authentication are out of scope.
 - Forecasting, causal claims, general knowledge, user accounts, and production-grade authentication are out of scope.
 - Population values are in thousands of people and may vary slightly when detailed categories are summed because of rounding.
 - Labour-force figures cross a population-benchmark break in 2025; the UI exposes this dataset provenance, but users must interpret cross-break trends cautiously.

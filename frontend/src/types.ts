@@ -44,6 +44,15 @@ export interface AnswerPayload {
     unit: string
     cache_freshness?: string | null
   } | null
+  sources?: Array<{
+    dataset_id: string
+    title: string
+    agency: string
+    url: string
+    period?: string | null
+    unit: string
+    cache_freshness?: string | null
+  }>
   trace: ExecutionTrace
   error?: string | null
   follow_ups?: string[]

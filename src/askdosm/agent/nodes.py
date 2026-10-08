@@ -10,21 +10,28 @@ from typing import Any, Protocol
 
 import pandas as pd
 
-from askdosm.agent.prompts import INTENT_SYSTEM, PLAN_SYSTEM
+from askdosm.agent.prompts import INTENT_SYSTEM, MULTI_PLAN_SYSTEM, PLAN_SYSTEM
 from askdosm.agent.state import AgentState
-from askdosm.analysis import analyze
-from askdosm.catalogue import Catalogue, Embedder
+from askdosm.analysis import analyze, _records as combined_records
+from askdosm.catalogue import Catalogue, Embedder, JoinRegistry
+from askdosm.combine import CombineError, combine
 from askdosm.data import DatasetCache, execute_plan, resolve_latest
 from askdosm.followups import generate_follow_ups
 from askdosm.models import (
+    AnalysisResult,
     AnswerPayload,
+    CombineHow,
+    CombineSpec,
     ExecutionTrace,
     IntentKind,
+    MultiPlan,
     Operation,
     OutputKind,
+    PlanStep,
     QueryPlan,
     QuestionIntent,
     SourceReference,
+    StepKind,
     TokenUsage,
 )
 from askdosm.validation import validate_result
@@ -48,6 +55,10 @@ class NodeServices:
     min_match_score: float = 0.10
     clarification_gap: float = 0.03
     assistant_facts_path: Any = None
+    joins: JoinRegistry | None = None
+    enable_multi_dataset: bool = True
+    max_plan_steps: int = 3
+    max_join_rows: int = 50_000
 
 
 def parse_question(state: AgentState, services: NodeServices) -> dict:
@@ -217,7 +228,7 @@ def _infer_assumptions(intent: QuestionIntent, definition: Any) -> list[str]:
 
 def select_dataset(state: AgentState, services: NodeServices) -> dict:
     intent = state["intent"]
-    if intent.multi_dataset:
+    if intent.multi_dataset and not services.enable_multi_dataset:
         return {"final_status": "unsupported", "errors": ["This version supports one dataset per question."]}
     candidates = state.get("candidates", [])
     floor = services.min_match_score
@@ -244,6 +255,295 @@ def select_dataset(state: AgentState, services: NodeServices) -> dict:
         "assumptions": assumptions,
         "final_status": "selected",
     }
+
+
+def plan_multi(state: AgentState, services: NodeServices) -> dict:
+    """Ask the LLM for a declarative DAG of dataset operations.
+
+    The plan is a list of fetch/combine steps, never code. It is validated by
+    validate_multi before anything is executed.
+    """
+    planner = services.llm.with_structured_output(MultiPlan)
+    catalogue_context = [
+        {
+            "dataset_id": item.dataset_id,
+            "title": item.title,
+            "domain": item.domain,
+            "geography_level": item.geography_level,
+            "frequency": item.frequency,
+            "dimensions": item.dimensions,
+            "measures": [{"name": m.name, "unit": m.unit, "aliases": m.aliases} for m in item.measures],
+            "default_filters": item.default_filters,
+        }
+        for item in services.catalogue.all()
+    ]
+    joinable = services.joins._pairs if services.joins else []
+    context = {
+        "question": state["question"],
+        "intent": state["intent"].model_dump(mode="json"),
+        "max_steps": services.max_plan_steps,
+        "catalogue": catalogue_context,
+        "joinable_pairs": joinable,
+    }
+    try:
+        plan = planner.invoke([("system", MULTI_PLAN_SYSTEM), ("human", json.dumps(context))])
+    except Exception as exc:
+        return {
+            "final_status": "unsupported",
+            "errors": [f"The multi-dataset request could not be planned ({type(exc).__name__})."],
+        }
+    return {"multi_plan": plan, "errors": []}
+
+
+def _resolve_source_dataset(
+    step_id: str, steps_by_id: dict[str, PlanStep], fetch_ids: dict[str, str]
+) -> str | None:
+    step = steps_by_id.get(step_id)
+    if step is None:
+        return None
+    if step.kind == StepKind.FETCH:
+        return fetch_ids.get(step_id)
+    return None
+
+
+def _validate_dag(plan: MultiPlan) -> list[str]:
+    errors: list[str] = []
+    step_ids = [step.step_id for step in plan.steps]
+    if len(step_ids) != len(set(step_ids)):
+        errors.append("The plan contains duplicate step ids.")
+    known: set[str] = set()
+    for step in plan.steps:
+        if step.kind == StepKind.FETCH:
+            if not step.dataset_id or step.plan is None:
+                errors.append(f"Fetch step {step.step_id} is missing a dataset or query plan.")
+        elif step.kind == StepKind.COMBINE:
+            if step.combine is None:
+                errors.append(f"Combine step {step.step_id} is missing its combine specification.")
+            else:
+                for ref in (step.combine.left, step.combine.right):
+                    if ref not in known:
+                        errors.append(f"Combine step {step.step_id} references unknown or later step {ref}.")
+        known.add(step.step_id)
+    if plan.final_step not in known:
+        errors.append("The final step does not exist in the plan.")
+    return errors
+
+
+def validate_multi(state: AgentState, services: NodeServices) -> dict:
+    """Validate the declarative DAG against the catalogue and the join whitelist."""
+    plan = state.get("multi_plan")
+    if plan is None:
+        return {"final_status": "unsupported", "errors": ["No plan was produced."]}
+
+    errors = _validate_dag(plan)
+    if len(plan.steps) > services.max_plan_steps:
+        errors.append(f"The plan uses more than the allowed {services.max_plan_steps} steps.")
+
+    steps_by_id = {step.step_id: step for step in plan.steps}
+    fetch_ids: dict[str, str] = {}
+    normalized_steps: list[PlanStep] = []
+    for step in plan.steps:
+        if step.kind == StepKind.FETCH:
+            try:
+                definition = services.catalogue.get(step.dataset_id or "")
+            except ValueError:
+                errors.append(f"Unknown dataset for step {step.step_id}: {step.dataset_id}")
+                normalized_steps.append(step)
+                continue
+            if step.plan is not None:
+                allowed = set(definition.dimensions) | {m.name for m in definition.measures}
+                referenced = set(step.plan.columns) | set(step.plan.group_by) | {f.column for f in step.plan.filters}
+                invalid = sorted(referenced - allowed)
+                if invalid:
+                    errors.append(f"Step {step.step_id} references unknown columns: {', '.join(invalid)}")
+                if step.plan.dataset_id != definition.dataset_id:
+                    step = step.model_copy(
+                        update={"plan": step.plan.model_copy(update={"dataset_id": definition.dataset_id})}
+                    )
+            fetch_ids[step.step_id] = definition.dataset_id
+        normalized_steps.append(step)
+
+    steps_by_id = {step.step_id: step for step in normalized_steps}
+
+    for step in normalized_steps:
+        if step.kind != StepKind.COMBINE or step.combine is None:
+            continue
+        combine = step.combine
+        left_ds = _resolve_source_dataset(combine.left, steps_by_id, fetch_ids)
+        right_ds = _resolve_source_dataset(combine.right, steps_by_id, fetch_ids)
+        if combine.how in {CombineHow.JOIN, CombineHow.RATIO, CombineHow.DIFFERENCE}:
+            if not left_ds or not right_ds:
+                errors.append(f"Step {step.step_id} could not resolve its input datasets for validation.")
+            elif services.joins is None or not services.joins.is_allowed(left_ds, right_ds, combine.on):
+                errors.append(
+                    f"Step {step.step_id} combines {left_ds} and {right_ds} on {combine.on}, "
+                    "which is not a whitelisted join."
+                )
+        elif combine.how == CombineHow.CONCAT and not combine.on:
+            errors.append(f"Step {step.step_id} concat is missing its alignment key(s).")
+
+    if errors:
+        return {"final_status": "unsupported", "errors": errors}
+    return {"multi_plan": plan.model_copy(update={"steps": normalized_steps}), "final_status": "multi_validated"}
+
+
+def _topological_steps(steps: list[PlanStep]) -> list[PlanStep]:
+    by_id = {step.step_id: step for step in steps}
+    ordered: list[PlanStep] = []
+    emitted: set[str] = set()
+    pending = list(steps)
+    while pending:
+        progressed = False
+        for step in list(pending):
+            deps = [step.combine.left, step.combine.right] if step.combine else []
+            if all(dep in emitted for dep in deps):
+                ordered.append(step)
+                emitted.add(step.step_id)
+                pending.remove(step)
+                progressed = True
+        if not progressed:
+            raise ValueError("The multi-dataset plan contains a cycle.")
+    return ordered
+
+
+def execute_multi(state: AgentState, services: NodeServices) -> dict:
+    """Execute the validated DAG: fetch each dataset, then combine deterministically."""
+    plan = state["multi_plan"]
+    steps = _topological_steps(plan.steps)
+    by_id = {step.step_id: step for step in steps}
+    frames: dict[str, Any] = {}
+    results: dict[str, Any] = {}
+
+    try:
+        for step in steps:
+            if step.kind == StepKind.FETCH:
+                definition = services.catalogue.get(step.dataset_id or "")
+                source = services.cache.load(definition)
+                frame = execute_plan(source, definition, step.plan)
+                if state["intent"].latest:
+                    frame = resolve_latest(frame)
+                frames[step.step_id] = frame
+                results[step.step_id] = analyze(frame, definition, step.plan)
+            elif step.kind == StepKind.COMBINE and step.combine is not None:
+                left_frame = frames.get(step.combine.left)
+                right_frame = frames.get(step.combine.right)
+                if left_frame is None or right_frame is None:
+                    raise ValueError(f"Step {step.step_id} is missing an input frame.")
+                merged = combine(
+                    left_frame,
+                    right_frame,
+                    step.combine,
+                    output_metric=step.output_metric,
+                    max_rows=services.max_join_rows,
+                )
+                frames[step.step_id] = merged
+                metric = step.output_metric or (
+                    merged.columns[-1] if len(merged.columns) else "value"
+                )
+                results[step.step_id] = AnalysisResult(
+                    rows=combined_records(merged),
+                    metric=metric,
+                    unit="",
+                    row_count=len(merged),
+                    result_kind="calculated",
+                    calculation=f"{step.combine.how} of {step.combine.left} and {step.combine.right}",
+                )
+    except (CombineError, ValueError) as exc:
+        return {"final_status": "unsupported", "errors": [str(exc)]}
+
+    final = results.get(plan.final_step)
+    if final is None:
+        return {"final_status": "unsupported", "errors": ["The final step produced no result."]}
+    return {
+        "step_frames": frames,
+        "step_results": results,
+        "analysis_result": final,
+        "query_frame": frames.get(plan.final_step),
+        "final_status": "multi_ready",
+    }
+
+
+def generate_multi_response(state: AgentState, services: NodeServices) -> dict:
+    """Assemble a multi-source answer from the executed DAG."""
+    plan = state["multi_plan"]
+    final = state["analysis_result"]
+    language = state["intent"].language.value
+
+    source_definitions: list[Any] = []
+    for step in plan.steps:
+        if step.kind == StepKind.FETCH and step.dataset_id:
+            try:
+                source_definitions.append(services.catalogue.get(step.dataset_id))
+            except ValueError:
+                continue
+    seen: set[str] = set()
+    unique_definitions = []
+    for definition in source_definitions:
+        if definition.dataset_id not in seen:
+            seen.add(definition.dataset_id)
+            unique_definitions.append(definition)
+
+    rows = final.rows or []
+    if rows:
+        if language == "ms":
+            answer_text = (
+                f"Saya menggabungkan {len(unique_definitions)} set data DOSM. "
+                f"Hasilnya mengandungi {final.row_count} pemerhatian. Lihat jadual di bawah."
+            )
+        else:
+            answer_text = (
+                f"I combined {len(unique_definitions)} DOSM datasets. "
+                f"The result has {final.row_count} observations. See the table below."
+            )
+    else:
+        answer_text = (
+            "Tiada pemerhatian yang sepadan ditemui." if language == "ms"
+            else "No matching observations were found."
+        )
+
+    sources = [
+        SourceReference(
+            dataset_id=definition.dataset_id,
+            title=definition.title,
+            agency=definition.source_agency,
+            url=definition.source_url,
+            unit="",
+            cache_freshness=state.get("cache_freshness"),
+        )
+        for definition in unique_definitions
+    ]
+    follow_ups = []
+    if unique_definitions:
+        follow_ups = generate_follow_ups(
+            dataset=unique_definitions[0],
+            intent=state["intent"],
+            plan=_first_fetch_plan(plan),
+            result=final,
+        )
+    payload = AnswerPayload(
+        answer=answer_text,
+        table_rows=final.rows,
+        visualization=choose_visualization(final, _first_fetch_plan(plan)),
+        source=sources[0] if sources else None,
+        sources=sources,
+        follow_ups=follow_ups,
+        assumptions=state.get("assumptions", []),
+        trace=ExecutionTrace(
+            intent=state.get("intent"),
+            calculation=final.calculation,
+            rows_used=final.row_count,
+            retry_count=state.get("retry_count", 0),
+            token_usage=getattr(services.llm, "usage", None),
+        ),
+    )
+    return {"answer": payload, "final_status": "complete"}
+
+
+def _first_fetch_plan(plan: MultiPlan) -> QueryPlan:
+    for step in plan.steps:
+        if step.kind == StepKind.FETCH and step.plan is not None:
+            return step.plan
+    return QueryPlan(dataset_id="", columns=[], metric="")
 
 
 def inspect_schema(state: AgentState, services: NodeServices) -> dict:

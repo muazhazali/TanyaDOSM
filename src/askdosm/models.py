@@ -57,6 +57,18 @@ class IntentKind(StrEnum):
     PROJECT = "project"
 
 
+class StepKind(StrEnum):
+    FETCH = "fetch"
+    COMBINE = "combine"
+
+
+class CombineHow(StrEnum):
+    CONCAT = "concat"
+    JOIN = "join"
+    RATIO = "ratio"
+    DIFFERENCE = "difference"
+
+
 class QuestionIntent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -74,6 +86,7 @@ class QuestionIntent(BaseModel):
     ambiguous: bool = False
     clarification: str | None = None
     multi_dataset: bool = False
+    sub_questions: list[str] = Field(default_factory=list)
 
     @model_validator(mode="before")
     @classmethod
@@ -157,6 +170,57 @@ class QueryPlan(BaseModel):
         if self.metric not in self.columns:
             self.columns.append(self.metric)
         return self
+
+
+class CombineSpec(BaseModel):
+    """A deterministic combination of two earlier steps. No code, no SQL."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    how: CombineHow
+    left: str
+    right: str
+    on: list[str] = Field(default_factory=list)
+    left_metric: str | None = None
+    right_metric: str | None = None
+    method: Literal["inner", "left"] = "inner"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_nulls(cls, values: Any) -> Any:
+        return _drop_nulls(values)
+
+
+class PlanStep(BaseModel):
+    """One node of the multi-dataset DAG: either a fetch or a combine."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    step_id: str
+    kind: StepKind
+    dataset_id: str | None = None
+    plan: QueryPlan | None = None
+    combine: CombineSpec | None = None
+    output_metric: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_nulls(cls, values: Any) -> Any:
+        return _drop_nulls(values)
+
+
+class MultiPlan(BaseModel):
+    """A declarative, catalogue-validated DAG of dataset operations."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    steps: list[PlanStep]
+    final_step: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_nulls(cls, values: Any) -> Any:
+        return _drop_nulls(values)
 
 
 class AnalysisResult(BaseModel):
@@ -252,6 +316,7 @@ class AnswerPayload(BaseModel):
     table_rows: list[dict[str, Any]] = Field(default_factory=list)
     visualization: VisualizationSpec = Field(default_factory=VisualizationSpec)
     source: SourceReference | None = None
+    sources: list[SourceReference] = Field(default_factory=list)
     trace: ExecutionTrace = Field(default_factory=ExecutionTrace)
     error: str | None = None
     follow_ups: list[str] = Field(default_factory=list)
