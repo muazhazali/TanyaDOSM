@@ -42,7 +42,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/population_malaysia",
     "parquet_url": "https://storage.dosm.gov.my/population/population_malaysia.parquet",
-    "caveats": [],
+    "caveats": [
+      "Population values are in thousands of people and may differ slightly from summed category totals because of rounding."
+    ],
     "expected_schema": {
       "date": "date",
       "sex": "string",
@@ -54,7 +56,10 @@
       "sex": "both",
       "age": "overall",
       "ethnicity": "overall"
-    }
+    },
+    "start_date": "1970-01-01",
+    "end_date": "2026-01-01",
+    "row_count": 17814
   },
   {
     "dataset_id": "population_state",
@@ -105,7 +110,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/population_state",
     "parquet_url": "https://storage.dosm.gov.my/population/population_state.parquet",
-    "caveats": [],
+    "caveats": [
+      "Population values are in thousands of people and may differ slightly from summed category totals because of rounding."
+    ],
     "expected_schema": {
       "state": "string",
       "date": "date",
@@ -118,7 +125,10 @@
       "sex": "both",
       "age": "overall",
       "ethnicity": "overall"
-    }
+    },
+    "start_date": "1970-01-01",
+    "end_date": "2026-01-01",
+    "row_count": 270063
   },
   {
     "dataset_id": "population_district",
@@ -151,7 +161,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/population_district",
     "parquet_url": "https://storage.dosm.gov.my/population/population_district.parquet",
-    "caveats": [],
+    "caveats": [
+      "Population values are in thousands of people and may differ slightly from summed category totals because of rounding."
+    ],
     "expected_schema": {
       "state": "string",
       "district": "string",
@@ -165,7 +177,10 @@
       "sex": "both",
       "age": "overall",
       "ethnicity": "overall"
-    }
+    },
+    "start_date": "2020-01-01",
+    "end_date": "2026-01-01",
+    "row_count": 451668
   },
   {
     "dataset_id": "population_parlimen",
@@ -198,7 +213,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/population_parlimen",
     "parquet_url": "https://storage.dosm.gov.my/population/population_parlimen.parquet",
-    "caveats": [],
+    "caveats": [
+      "Population values are in thousands of people and may differ slightly from summed category totals because of rounding."
+    ],
     "expected_schema": {
       "date": "date",
       "state": "string",
@@ -212,7 +229,10 @@
       "sex": "both",
       "age": "overall",
       "ethnicity": "overall"
-    }
+    },
+    "start_date": "2020-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 5550
   },
   {
     "dataset_id": "population_dun",
@@ -246,7 +266,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/population_dun",
     "parquet_url": "https://storage.dosm.gov.my/population/population_dun.parquet",
-    "caveats": [],
+    "caveats": [
+      "Population values are in thousands of people and may differ slightly from summed category totals because of rounding."
+    ],
     "expected_schema": {
       "date": "date",
       "state": "string",
@@ -261,7 +283,10 @@
       "sex": "both",
       "age": "overall",
       "ethnicity": "overall"
-    }
+    },
+    "start_date": "2020-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 15000
   },
   {
     "dataset_id": "births_annual",
@@ -302,7 +327,10 @@
       "abs": "number",
       "rate": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2000-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 25
   },
   {
     "dataset_id": "births_annual_state",
@@ -345,7 +373,10 @@
       "abs": "number",
       "rate": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2000-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 390
   },
   {
     "dataset_id": "births_annual_sex_ethnic",
@@ -392,7 +423,10 @@
     },
     "default_filters": {
       "sex": "both"
-    }
+    },
+    "start_date": "2000-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 525
   },
   {
     "dataset_id": "births_annual_sex_ethnic_state",
@@ -433,7 +467,10 @@
     },
     "default_filters": {
       "sex": "both"
-    }
+    },
+    "start_date": "2000-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 8190
   },
   {
     "dataset_id": "births_district_sex",
@@ -482,7 +519,10 @@
     },
     "default_filters": {
       "sex": "both"
-    }
+    },
+    "start_date": "2020-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 2361
   },
   {
     "dataset_id": "stillbirths",
@@ -523,7 +563,10 @@
       "abs": "number",
       "rate": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2000-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 25
   },
   {
     "dataset_id": "stillbirths_state",
@@ -566,7 +609,10 @@
       "abs": "number",
       "rate": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2000-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 390
   },
   {
     "dataset_id": "deaths",
@@ -607,7 +653,10 @@
       "abs": "number",
       "rate": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2000-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 25
   },
   {
     "dataset_id": "deaths_state",
@@ -650,7 +699,10 @@
       "abs": "number",
       "rate": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2000-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 390
   },
   {
     "dataset_id": "deaths_sex_ethnic",
@@ -697,7 +749,10 @@
     },
     "default_filters": {
       "sex": "both"
-    }
+    },
+    "start_date": "2000-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 525
   },
   {
     "dataset_id": "deaths_sex_ethnic_state",
@@ -738,7 +793,10 @@
     },
     "default_filters": {
       "sex": "both"
-    }
+    },
+    "start_date": "2000-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 8190
   },
   {
     "dataset_id": "deaths_district_sex",
@@ -787,7 +845,10 @@
     },
     "default_filters": {
       "sex": "both"
-    }
+    },
+    "start_date": "2020-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 2361
   },
   {
     "dataset_id": "deaths_early_childhood",
@@ -830,7 +891,10 @@
       "abs": "number",
       "rate": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2000-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 125
   },
   {
     "dataset_id": "deaths_early_childhood_sex",
@@ -877,7 +941,10 @@
     },
     "default_filters": {
       "sex": "both"
-    }
+    },
+    "start_date": "2017-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 42
   },
   {
     "dataset_id": "deaths_early_childhood_state",
@@ -922,7 +989,10 @@
       "abs": "number",
       "rate": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2000-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 1950
   },
   {
     "dataset_id": "deaths_early_childhood_state_sex",
@@ -971,7 +1041,10 @@
     },
     "default_filters": {
       "sex": "both"
-    }
+    },
+    "start_date": "2017-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 672
   },
   {
     "dataset_id": "deaths_maternal",
@@ -1006,7 +1079,10 @@
       "abs": "string",
       "rate": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "1946-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 79
   },
   {
     "dataset_id": "deaths_maternal_state",
@@ -1049,7 +1125,10 @@
       "abs": "number",
       "rate": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2000-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 390
   },
   {
     "dataset_id": "marriages",
@@ -1092,7 +1171,10 @@
       "abs": "number",
       "rate": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2017-01-01",
+    "end_date": "2022-01-01",
+    "row_count": 12
   },
   {
     "dataset_id": "marriages_age",
@@ -1139,7 +1221,10 @@
     },
     "default_filters": {
       "age": "all"
-    }
+    },
+    "start_date": "2017-01-01",
+    "end_date": "2022-01-01",
+    "row_count": 144
   },
   {
     "dataset_id": "marriages_state",
@@ -1184,7 +1269,10 @@
       "abs": "number",
       "rate": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2017-01-01",
+    "end_date": "2022-01-01",
+    "row_count": 192
   },
   {
     "dataset_id": "marriages_state_age",
@@ -1233,7 +1321,10 @@
     },
     "default_filters": {
       "age": "all"
-    }
+    },
+    "start_date": "2017-01-01",
+    "end_date": "2022-01-01",
+    "row_count": 2304
   },
   {
     "dataset_id": "fertility",
@@ -1269,7 +1360,10 @@
       "age_group": "string",
       "fertility_rate": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "1958-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 536
   },
   {
     "dataset_id": "fertility_state",
@@ -1307,7 +1401,10 @@
       "age_group": "string",
       "fertility_rate": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2001-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 3000
   },
   {
     "dataset_id": "hh_profile",
@@ -1349,7 +1446,10 @@
       "households": "number",
       "living_quarters": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "1970-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 19
   },
   {
     "dataset_id": "hh_profile_state",
@@ -1393,7 +1493,10 @@
       "households": "number",
       "living_quarters": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "1970-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 297
   },
   {
     "dataset_id": "hh_income",
@@ -1436,7 +1539,10 @@
       "income_mean": "number",
       "income_median": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "1970-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 22
   },
   {
     "dataset_id": "hh_income_state",
@@ -1481,7 +1587,10 @@
       "income_mean": "number",
       "income_median": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "1970-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 319
   },
   {
     "dataset_id": "hh_income_district",
@@ -1528,7 +1637,10 @@
       "income_mean": "number",
       "income_median": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2019-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 480
   },
   {
     "dataset_id": "hies_malaysia_percentile",
@@ -1571,7 +1683,10 @@
       "variable": "string",
       "income": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2019-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 1200
   },
   {
     "dataset_id": "hies_state_percentile",
@@ -1616,7 +1731,10 @@
       "variable": "string",
       "income": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2019-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 19200
   },
   {
     "dataset_id": "hh_poverty",
@@ -1668,7 +1786,10 @@
       "poverty_hardcore": "number",
       "poverty_relative": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "1970-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 21
   },
   {
     "dataset_id": "hh_poverty_state",
@@ -1722,7 +1843,10 @@
       "poverty_hardcore": "number",
       "poverty_relative": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "1970-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 310
   },
   {
     "dataset_id": "hh_poverty_district",
@@ -1769,7 +1893,10 @@
       "poverty_absolute": "number",
       "poverty_relative": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2019-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 480
   },
   {
     "dataset_id": "hh_inequality",
@@ -1802,7 +1929,10 @@
       "date": "date",
       "gini": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "1970-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 21
   },
   {
     "dataset_id": "hh_inequality_state",
@@ -1837,7 +1967,10 @@
       "date": "date",
       "gini": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "1974-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 289
   },
   {
     "dataset_id": "hh_inequality_district",
@@ -1874,7 +2007,10 @@
       "date": "date",
       "gini": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2019-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 480
   },
   {
     "dataset_id": "hies_state",
@@ -1932,7 +2068,10 @@
       "gini": "string",
       "poverty": "string"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2022-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 32
   },
   {
     "dataset_id": "hies_district",
@@ -2004,7 +2143,10 @@
       "gini": "number",
       "poverty": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2022-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 322
   },
   {
     "dataset_id": "hh_access_amenities",
@@ -2060,7 +2202,10 @@
     },
     "default_filters": {
       "district": "All Districts"
-    }
+    },
+    "start_date": "2016-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 694
   },
   {
     "dataset_id": "gdp_gni_annual_nominal",
@@ -2121,7 +2266,10 @@
       "gdp_capita": "number",
       "gni_capita": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "1947-01-01",
+    "end_date": "2025-01-01",
+    "row_count": 157
   },
   {
     "dataset_id": "gdp_gni_annual_real",
@@ -2182,7 +2330,10 @@
       "gdp_capita": "number",
       "gni_capita": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "1970-01-01",
+    "end_date": "2025-01-01",
+    "row_count": 111
   },
   {
     "dataset_id": "gdp_annual_nominal_supply",
@@ -2219,7 +2370,10 @@
       "sector": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2025-01-01",
+    "row_count": 147
   },
   {
     "dataset_id": "gdp_annual_nominal_supply_granular",
@@ -2256,7 +2410,10 @@
       "sector": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2025-01-01",
+    "row_count": 2373
   },
   {
     "dataset_id": "gdp_annual_nominal_demand",
@@ -2293,7 +2450,10 @@
       "type": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2025-01-01",
+    "row_count": 137
   },
   {
     "dataset_id": "gdp_annual_nominal_demand_granular",
@@ -2330,7 +2490,10 @@
       "type": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2025-01-01",
+    "row_count": 893
   },
   {
     "dataset_id": "gdp_annual_nominal_income",
@@ -2367,7 +2530,10 @@
       "component": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2010-01-01",
+    "end_date": "2025-01-01",
+    "row_count": 156
   },
   {
     "dataset_id": "gdp_annual_real_supply",
@@ -2404,7 +2570,10 @@
       "sector": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2025-01-01",
+    "row_count": 147
   },
   {
     "dataset_id": "gdp_annual_real_supply_granular",
@@ -2441,7 +2610,10 @@
       "sector": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2025-01-01",
+    "row_count": 2373
   },
   {
     "dataset_id": "gdp_annual_real_demand",
@@ -2478,7 +2650,10 @@
       "type": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2025-01-01",
+    "row_count": 137
   },
   {
     "dataset_id": "gdp_annual_real_demand_granular",
@@ -2515,7 +2690,10 @@
       "type": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2025-01-01",
+    "row_count": 893
   },
   {
     "dataset_id": "gdp_qtr_nominal",
@@ -2550,7 +2728,10 @@
       "date": "date",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 133
   },
   {
     "dataset_id": "gdp_qtr_nominal_supply",
@@ -2587,7 +2768,10 @@
       "sector": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 931
   },
   {
     "dataset_id": "gdp_qtr_nominal_supply_granular",
@@ -2624,7 +2808,10 @@
       "sector": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 10241
   },
   {
     "dataset_id": "gdp_qtr_nominal_demand",
@@ -2661,7 +2848,10 @@
       "type": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 844
   },
   {
     "dataset_id": "gdp_qtr_nominal_demand_granular",
@@ -2698,7 +2888,10 @@
       "type": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 3504
   },
   {
     "dataset_id": "gdp_qtr_real",
@@ -2733,7 +2926,10 @@
       "date": "date",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 133
   },
   {
     "dataset_id": "gdp_qtr_real_supply",
@@ -2770,7 +2966,10 @@
       "sector": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 931
   },
   {
     "dataset_id": "gdp_qtr_real_supply_granular",
@@ -2807,7 +3006,10 @@
       "sector": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 10241
   },
   {
     "dataset_id": "gdp_qtr_real_demand",
@@ -2844,7 +3046,10 @@
       "type": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 844
   },
   {
     "dataset_id": "gdp_qtr_real_demand_granular",
@@ -2881,7 +3086,10 @@
       "type": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 3504
   },
   {
     "dataset_id": "gdp_qtr_real_sa",
@@ -2916,7 +3124,10 @@
       "date": "date",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 46
   },
   {
     "dataset_id": "gdp_qtr_real_sa_supply",
@@ -2953,7 +3164,10 @@
       "sector": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 322
   },
   {
     "dataset_id": "gdp_qtr_real_sa_demand",
@@ -2990,7 +3204,10 @@
       "type": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 276
   },
   {
     "dataset_id": "gdp_state_real_supply",
@@ -3029,7 +3246,10 @@
       "sector": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2025-01-01",
+    "row_count": 2163
   },
   {
     "dataset_id": "gdp_district_real_supply",
@@ -3070,7 +3290,10 @@
       "sector": "string",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2020-01-01",
+    "row_count": 10626
   },
   {
     "dataset_id": "gdp_lookup",
@@ -3100,7 +3323,8 @@
       "desc_en": "string",
       "desc_bm": "string"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "row_count": 174
   },
   {
     "dataset_id": "bop_balance",
@@ -3135,7 +3359,10 @@
       "account": "string",
       "balance": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2010-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 330
   },
   {
     "dataset_id": "fdi_flows",
@@ -3184,7 +3411,10 @@
       "outflow": "number",
       "net": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2008-01-01",
+    "end_date": "2025-07-01",
+    "row_count": 71
   },
   {
     "dataset_id": "schools_district",
@@ -3228,7 +3458,10 @@
     "default_filters": {
       "state": "Malaysia",
       "district": "All Districts"
-    }
+    },
+    "start_date": "2017-01-01",
+    "end_date": "2025-06-30",
+    "row_count": 3977
   },
   {
     "dataset_id": "teachers_district",
@@ -3273,7 +3506,10 @@
       "state": "Malaysia",
       "district": "All Districts",
       "sex": "both"
-    }
+    },
+    "start_date": "2017-01-01",
+    "end_date": "2025-06-30",
+    "row_count": 8805
   },
   {
     "dataset_id": "lecturers_uni",
@@ -3318,7 +3554,10 @@
       "state": "Malaysia",
       "citizenship": "all",
       "sex": "both"
-    }
+    },
+    "start_date": "2014-01-01",
+    "end_date": "2023-01-01",
+    "row_count": 2250
   },
   {
     "dataset_id": "enrolment_school_district",
@@ -3363,7 +3602,10 @@
       "state": "Malaysia",
       "district": "All Districts",
       "sex": "both"
-    }
+    },
+    "start_date": "2017-01-01",
+    "end_date": "2025-06-30",
+    "row_count": 12756
   },
   {
     "dataset_id": "completion_school_state",
@@ -3405,7 +3647,10 @@
     "default_filters": {
       "state": "Malaysia",
       "sex": "both"
-    }
+    },
+    "start_date": "2016-01-01",
+    "end_date": "2022-01-01",
+    "row_count": 1071
   },
   {
     "dataset_id": "crime_district",
@@ -3450,7 +3695,10 @@
       "state": "Malaysia",
       "district": "All",
       "type": "all"
-    }
+    },
+    "start_date": "2016-01-01",
+    "end_date": "2023-01-01",
+    "row_count": 19152
   },
   {
     "dataset_id": "prisoners_state",
@@ -3490,7 +3738,10 @@
     "default_filters": {
       "state": "Malaysia",
       "sex": "both"
-    }
+    },
+    "start_date": "2017-01-01",
+    "end_date": "2022-01-01",
+    "row_count": 234
   },
   {
     "dataset_id": "prisoners_prison",
@@ -3531,7 +3782,10 @@
     },
     "default_filters": {
       "sex": "both"
-    }
+    },
+    "start_date": "2017-01-01",
+    "end_date": "2022-01-01",
+    "row_count": 648
   },
   {
     "dataset_id": "lfs_month",
@@ -3650,7 +3904,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/lfs_month",
     "parquet_url": "https://storage.dosm.gov.my/labour/lfs_month.parquet",
-    "caveats": [],
+    "caveats": [
+      "Labour-force series cross a population-benchmark break in 2025; interpret trends that span the break with caution."
+    ],
     "expected_schema": {
       "date": "date",
       "lf": "number",
@@ -3661,7 +3917,10 @@
       "ep_ratio": "number",
       "u_rate": "string"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2010-01-01",
+    "end_date": "2026-07-01",
+    "row_count": 199
   },
   {
     "dataset_id": "lfs_month_sa",
@@ -3714,7 +3973,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/lfs_month_sa",
     "parquet_url": "https://storage.dosm.gov.my/labour/lfs_month_sa.parquet",
-    "caveats": [],
+    "caveats": [
+      "Labour-force series cross a population-benchmark break in 2025; interpret trends that span the break with caution."
+    ],
     "expected_schema": {
       "date": "date",
       "lf": "number",
@@ -3723,7 +3984,10 @@
       "p_rate": "number",
       "u_rate": "string"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2010-01-01",
+    "end_date": "2026-07-01",
+    "row_count": 199
   },
   {
     "dataset_id": "lfs_month_status",
@@ -3784,7 +4048,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/lfs_month_status",
     "parquet_url": "https://storage.dosm.gov.my/labour/lfs_month_status.parquet",
-    "caveats": [],
+    "caveats": [
+      "Labour-force series cross a population-benchmark break in 2025; interpret trends that span the break with caution."
+    ],
     "expected_schema": {
       "variable": "string",
       "date": "date",
@@ -3794,7 +4060,10 @@
       "employed_own_account": "number",
       "employed_unpaid_family": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2016-01-01",
+    "end_date": "2026-07-01",
+    "row_count": 254
   },
   {
     "dataset_id": "lfs_month_duration",
@@ -3870,7 +4139,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/lfs_month_duration",
     "parquet_url": "https://storage.dosm.gov.my/labour/lfs_month_duration.parquet",
-    "caveats": [],
+    "caveats": [
+      "Labour-force series cross a population-benchmark break in 2025; interpret trends that span the break with caution."
+    ],
     "expected_schema": {
       "date": "date",
       "unemployed": "number",
@@ -3881,7 +4152,10 @@
       "unemployed_active_long": "number",
       "unemployed_inactive": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2016-01-01",
+    "end_date": "2026-06-01",
+    "row_count": 126
   },
   {
     "dataset_id": "lfs_month_youth",
@@ -3940,7 +4214,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/lfs_month_youth",
     "parquet_url": "https://storage.dosm.gov.my/labour/lfs_month_youth.parquet",
-    "caveats": [],
+    "caveats": [
+      "Labour-force series cross a population-benchmark break in 2025; interpret trends that span the break with caution."
+    ],
     "expected_schema": {
       "date": "date",
       "unemployed_15_24": "number",
@@ -3948,7 +4224,10 @@
       "unemployed_15_30": "number",
       "u_rate_15_30": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2016-01-01",
+    "end_date": "2026-06-01",
+    "row_count": 126
   },
   {
     "dataset_id": "lfs_qtr",
@@ -4017,7 +4296,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/lfs_qtr",
     "parquet_url": "https://storage.dosm.gov.my/labour/lfs_qtr.parquet",
-    "caveats": [],
+    "caveats": [
+      "Labour-force series cross a population-benchmark break in 2025; interpret trends that span the break with caution."
+    ],
     "expected_schema": {
       "date": "date",
       "lf": "number",
@@ -4028,7 +4309,10 @@
       "ep_ratio": "number",
       "u_rate": "string"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2010-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 66
   },
   {
     "dataset_id": "lfs_qtr_sru_age",
@@ -4058,7 +4342,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/lfs_qtr_sru_age",
     "parquet_url": "https://storage.dosm.gov.my/labour/lfs_qtr_sru_age.parquet",
-    "caveats": [],
+    "caveats": [
+      "Labour-force series cross a population-benchmark break in 2025; interpret trends that span the break with caution."
+    ],
     "expected_schema": {
       "date": "date",
       "variable": "string",
@@ -4067,7 +4353,10 @@
     },
     "default_filters": {
       "age": "overall"
-    }
+    },
+    "start_date": "2017-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 380
   },
   {
     "dataset_id": "lfs_qtr_sru_sex",
@@ -4097,7 +4386,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/lfs_qtr_sru_sex",
     "parquet_url": "https://storage.dosm.gov.my/labour/lfs_qtr_sru_sex.parquet",
-    "caveats": [],
+    "caveats": [
+      "Labour-force series cross a population-benchmark break in 2025; interpret trends that span the break with caution."
+    ],
     "expected_schema": {
       "date": "date",
       "variable": "string",
@@ -4106,7 +4397,10 @@
     },
     "default_filters": {
       "sex": "overall"
-    }
+    },
+    "start_date": "2017-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 228
   },
   {
     "dataset_id": "lfs_qtr_tru_age",
@@ -4136,7 +4430,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/lfs_qtr_tru_age",
     "parquet_url": "https://storage.dosm.gov.my/labour/lfs_qtr_tru_age.parquet",
-    "caveats": [],
+    "caveats": [
+      "Labour-force series cross a population-benchmark break in 2025; interpret trends that span the break with caution."
+    ],
     "expected_schema": {
       "date": "date",
       "variable": "string",
@@ -4145,7 +4441,10 @@
     },
     "default_filters": {
       "age": "overall"
-    }
+    },
+    "start_date": "2017-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 380
   },
   {
     "dataset_id": "lfs_qtr_tru_sex",
@@ -4175,7 +4474,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/lfs_qtr_tru_sex",
     "parquet_url": "https://storage.dosm.gov.my/labour/lfs_qtr_tru_sex.parquet",
-    "caveats": [],
+    "caveats": [
+      "Labour-force series cross a population-benchmark break in 2025; interpret trends that span the break with caution."
+    ],
     "expected_schema": {
       "date": "date",
       "variable": "string",
@@ -4184,7 +4485,10 @@
     },
     "default_filters": {
       "sex": "overall"
-    }
+    },
+    "start_date": "2017-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 228
   },
   {
     "dataset_id": "lfs_qtr_state",
@@ -4299,7 +4603,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/lfs_qtr_state",
     "parquet_url": "https://storage.dosm.gov.my/labour/lfs_qtr_state.parquet",
-    "caveats": [],
+    "caveats": [
+      "Labour-force series cross a population-benchmark break in 2025; interpret trends that span the break with caution."
+    ],
     "expected_schema": {
       "date": "date",
       "state": "string",
@@ -4310,7 +4616,10 @@
       "p_rate": "number",
       "u_rate": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2017-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 608
   },
   {
     "dataset_id": "lfs_year",
@@ -4372,7 +4681,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/lfs_year",
     "parquet_url": "https://storage.dosm.gov.my/labour/lfs_year.parquet",
-    "caveats": [],
+    "caveats": [
+      "Labour-force series cross a population-benchmark break in 2025; interpret trends that span the break with caution."
+    ],
     "expected_schema": {
       "date": "date",
       "lf": "number",
@@ -4383,7 +4694,10 @@
       "ep_ratio": "string",
       "u_rate": "string"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "1982-01-01",
+    "end_date": "2023-01-01",
+    "row_count": 40
   },
   {
     "dataset_id": "lfs_year_sex",
@@ -4460,7 +4774,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/lfs_year_sex",
     "parquet_url": "https://storage.dosm.gov.my/labour/lfs_year_sex.parquet",
-    "caveats": [],
+    "caveats": [
+      "Labour-force series cross a population-benchmark break in 2025; interpret trends that span the break with caution."
+    ],
     "expected_schema": {
       "sex": "string",
       "date": "date",
@@ -4474,7 +4790,10 @@
     },
     "default_filters": {
       "sex": "both"
-    }
+    },
+    "start_date": "1982-01-01",
+    "end_date": "2023-01-01",
+    "row_count": 120
   },
   {
     "dataset_id": "lfs_state_sex",
@@ -4552,7 +4871,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/lfs_state_sex",
     "parquet_url": "https://storage.dosm.gov.my/labour/lfs_state_sex.parquet",
-    "caveats": [],
+    "caveats": [
+      "Labour-force series cross a population-benchmark break in 2025; interpret trends that span the break with caution."
+    ],
     "expected_schema": {
       "state": "string",
       "sex": "string",
@@ -4567,7 +4888,10 @@
     },
     "default_filters": {
       "sex": "both"
-    }
+    },
+    "start_date": "1982-01-01",
+    "end_date": "2023-01-01",
+    "row_count": 1732
   },
   {
     "dataset_id": "lfs_district",
@@ -4645,7 +4969,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/lfs_district",
     "parquet_url": "https://storage.dosm.gov.my/labour/lfs_district.parquet",
-    "caveats": [],
+    "caveats": [
+      "Labour-force series cross a population-benchmark break in 2025; interpret trends that span the break with caution."
+    ],
     "expected_schema": {
       "state": "string",
       "district": "string",
@@ -4658,7 +4984,10 @@
       "u_rate": "number",
       "ep_ratio": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2018-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 1116
   },
   {
     "dataset_id": "employment_sector",
@@ -4697,7 +5026,10 @@
     },
     "default_filters": {
       "sex": "both"
-    }
+    },
+    "start_date": "2001-01-01",
+    "end_date": "2025-01-01",
+    "row_count": 225
   },
   {
     "dataset_id": "productivity_annual",
@@ -4768,7 +5100,10 @@
       "output_hour": "number",
       "output_employment": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2025-01-01",
+    "row_count": 462
   },
   {
     "dataset_id": "productivity_annual_priority",
@@ -4815,7 +5150,10 @@
       "output_employment": "number",
       "output_hour": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2025-01-01",
+    "row_count": 288
   },
   {
     "dataset_id": "productivity_qtr",
@@ -4886,7 +5224,10 @@
       "output_hour": "number",
       "output_employment": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 1936
   },
   {
     "dataset_id": "productivity_lookup",
@@ -4916,7 +5257,8 @@
     },
     "default_filters": {
       "desc_en": "Overall"
-    }
+    },
+    "row_count": 36
   },
   {
     "dataset_id": "cpi_annual",
@@ -4945,7 +5287,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/cpi_annual",
     "parquet_url": "https://storage.dosm.gov.my/cpi/cpi_2d_annual.parquet",
-    "caveats": [],
+    "caveats": [
+      "CPI reflects an average consumer basket, not any individual's exact experienced inflation."
+    ],
     "expected_schema": {
       "date": "date",
       "division": "string",
@@ -4953,7 +5297,10 @@
     },
     "default_filters": {
       "division": "overall"
-    }
+    },
+    "start_date": "1960-01-01",
+    "end_date": "2025-01-01",
+    "row_count": 542
   },
   {
     "dataset_id": "cpi_annual_inflation",
@@ -4982,7 +5329,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/cpi_annual_inflation",
     "parquet_url": "https://storage.dosm.gov.my/cpi/cpi_2d_annual_inflation.parquet",
-    "caveats": [],
+    "caveats": [
+      "CPI reflects an average consumer basket, not any individual's exact experienced inflation."
+    ],
     "expected_schema": {
       "date": "date",
       "division": "string",
@@ -4990,7 +5339,10 @@
     },
     "default_filters": {
       "division": "overall"
-    }
+    },
+    "start_date": "1961-01-01",
+    "end_date": "2025-01-01",
+    "row_count": 528
   },
   {
     "dataset_id": "cpi_headline",
@@ -5019,7 +5371,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/cpi_headline",
     "parquet_url": "https://storage.dosm.gov.my/cpi/cpi_2d.parquet",
-    "caveats": [],
+    "caveats": [
+      "CPI reflects an average consumer basket, not any individual's exact experienced inflation."
+    ],
     "expected_schema": {
       "date": "date",
       "division": "string",
@@ -5027,7 +5381,10 @@
     },
     "default_filters": {
       "division": "overall"
-    }
+    },
+    "start_date": "1980-01-01",
+    "end_date": "2026-08-01",
+    "row_count": 7840
   },
   {
     "dataset_id": "cpi_headline_inflation",
@@ -5065,7 +5422,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/cpi_headline_inflation",
     "parquet_url": "https://storage.dosm.gov.my/cpi/cpi_2d_inflation.parquet",
-    "caveats": [],
+    "caveats": [
+      "CPI reflects an average consumer basket, not any individual's exact experienced inflation."
+    ],
     "expected_schema": {
       "date": "date",
       "division": "string",
@@ -5074,7 +5433,10 @@
     },
     "default_filters": {
       "division": "overall"
-    }
+    },
+    "start_date": "1980-02-01",
+    "end_date": "2026-08-01",
+    "row_count": 7826
   },
   {
     "dataset_id": "cpi_core",
@@ -5103,7 +5465,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/cpi_core",
     "parquet_url": "https://storage.dosm.gov.my/cpi/cpi_2d_core.parquet",
-    "caveats": [],
+    "caveats": [
+      "CPI reflects an average consumer basket, not any individual's exact experienced inflation."
+    ],
     "expected_schema": {
       "date": "date",
       "division": "string",
@@ -5111,7 +5475,10 @@
     },
     "default_filters": {
       "division": "overall"
-    }
+    },
+    "start_date": "2018-01-01",
+    "end_date": "2026-08-01",
+    "row_count": 1456
   },
   {
     "dataset_id": "cpi_core_inflation",
@@ -5149,7 +5516,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/cpi_core_inflation",
     "parquet_url": "https://storage.dosm.gov.my/cpi/cpi_2d_core_inflation.parquet",
-    "caveats": [],
+    "caveats": [
+      "CPI reflects an average consumer basket, not any individual's exact experienced inflation."
+    ],
     "expected_schema": {
       "date": "date",
       "division": "string",
@@ -5158,7 +5527,10 @@
     },
     "default_filters": {
       "division": "overall"
-    }
+    },
+    "start_date": "2018-02-01",
+    "end_date": "2026-08-01",
+    "row_count": 1442
   },
   {
     "dataset_id": "cpi_state",
@@ -5188,7 +5560,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/cpi_state",
     "parquet_url": "https://storage.dosm.gov.my/cpi/cpi_2d_state.parquet",
-    "caveats": [],
+    "caveats": [
+      "CPI reflects an average consumer basket, not any individual's exact experienced inflation."
+    ],
     "expected_schema": {
       "state": "string",
       "date": "date",
@@ -5197,7 +5571,10 @@
     },
     "default_filters": {
       "division": "overall"
-    }
+    },
+    "start_date": "2010-01-01",
+    "end_date": "2026-08-01",
+    "row_count": 44800
   },
   {
     "dataset_id": "cpi_state_inflation",
@@ -5267,7 +5644,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/cpi_state_inflation",
     "parquet_url": "https://storage.dosm.gov.my/cpi/cpi_2d_state_inflation.parquet",
-    "caveats": [],
+    "caveats": [
+      "CPI reflects an average consumer basket, not any individual's exact experienced inflation."
+    ],
     "expected_schema": {
       "state": "string",
       "date": "date",
@@ -5277,7 +5656,10 @@
     },
     "default_filters": {
       "division": "overall"
-    }
+    },
+    "start_date": "2010-02-01",
+    "end_date": "2026-08-01",
+    "row_count": 44576
   },
   {
     "dataset_id": "cpi_3d",
@@ -5306,13 +5688,18 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/cpi_3d",
     "parquet_url": "https://storage.dosm.gov.my/cpi/cpi_3d.parquet",
-    "caveats": [],
+    "caveats": [
+      "CPI reflects an average consumer basket, not any individual's exact experienced inflation."
+    ],
     "expected_schema": {
       "date": "date",
       "group": "string",
       "index": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2010-01-01",
+    "end_date": "2026-08-01",
+    "row_count": 9400
   },
   {
     "dataset_id": "cpi_4d",
@@ -5341,13 +5728,18 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/cpi_4d",
     "parquet_url": "https://storage.dosm.gov.my/cpi/cpi_4d.parquet",
-    "caveats": [],
+    "caveats": [
+      "CPI reflects an average consumer basket, not any individual's exact experienced inflation."
+    ],
     "expected_schema": {
       "date": "date",
       "class": "string",
       "index": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2010-01-01",
+    "end_date": "2026-08-01",
+    "row_count": 20200
   },
   {
     "dataset_id": "cpi_5d",
@@ -5376,13 +5768,18 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/cpi_5d",
     "parquet_url": "https://storage.dosm.gov.my/cpi/cpi_5d.parquet",
-    "caveats": [],
+    "caveats": [
+      "CPI reflects an average consumer basket, not any individual's exact experienced inflation."
+    ],
     "expected_schema": {
       "date": "date",
       "subclass": "string",
       "index": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2010-01-01",
+    "end_date": "2026-08-01",
+    "row_count": 36200
   },
   {
     "dataset_id": "cpi_strata",
@@ -5412,7 +5809,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/cpi_strata",
     "parquet_url": "https://storage.dosm.gov.my/cpi/cpi_2d_strata.parquet",
-    "caveats": [],
+    "caveats": [
+      "CPI reflects an average consumer basket, not any individual's exact experienced inflation."
+    ],
     "expected_schema": {
       "strata": "string",
       "date": "date",
@@ -5421,7 +5820,10 @@
     },
     "default_filters": {
       "division": "overall"
-    }
+    },
+    "start_date": "2010-01-01",
+    "end_date": "2026-08-01",
+    "row_count": 5600
   },
   {
     "dataset_id": "cpi_lowincome",
@@ -5450,7 +5852,9 @@
     "source_agency": "Department of Statistics Malaysia",
     "source_url": "https://data.gov.my/data-catalogue/cpi_lowincome",
     "parquet_url": "https://storage.dosm.gov.my/cpi/cpi_2d_lowincome.parquet",
-    "caveats": [],
+    "caveats": [
+      "CPI reflects an average consumer basket, not any individual's exact experienced inflation."
+    ],
     "expected_schema": {
       "date": "date",
       "division": "string",
@@ -5458,7 +5862,10 @@
     },
     "default_filters": {
       "division": "overall"
-    }
+    },
+    "start_date": "2010-01-01",
+    "end_date": "2026-08-01",
+    "row_count": 2800
   },
   {
     "dataset_id": "pricecatcher",
@@ -5509,7 +5916,10 @@
       "item_code": "number",
       "price": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2026-08-01",
+    "end_date": "2026-08-30",
+    "row_count": 1933285
   },
   {
     "dataset_id": "lookup_premise",
@@ -5551,7 +5961,8 @@
       "state": "string",
       "district": "string"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "row_count": 3916
   },
   {
     "dataset_id": "lookup_item",
@@ -5591,7 +6002,8 @@
       "item_group": "string",
       "item_category": "string"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "row_count": 797
   },
   {
     "dataset_id": "ppi",
@@ -5635,7 +6047,10 @@
       "index": "number",
       "index_sa": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2010-01-01",
+    "end_date": "2026-08-01",
+    "row_count": 587
   },
   {
     "dataset_id": "ppi_1d",
@@ -5681,7 +6096,10 @@
       "index": "number",
       "index_sa": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2010-01-01",
+    "end_date": "2026-08-01",
+    "row_count": 2935
   },
   {
     "dataset_id": "ppi_2d",
@@ -5718,7 +6136,10 @@
       "division": "string",
       "index": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-08-01",
+    "row_count": 11396
   },
   {
     "dataset_id": "ppi_3d",
@@ -5755,7 +6176,10 @@
       "group": "string",
       "index": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2010-01-01",
+    "end_date": "2026-08-01",
+    "row_count": 37476
   },
   {
     "dataset_id": "ppi_sitc",
@@ -5792,7 +6216,10 @@
       "section": "string",
       "index": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2010-01-01",
+    "end_date": "2026-08-01",
+    "row_count": 5283
   },
   {
     "dataset_id": "ppi_sop",
@@ -5829,7 +6256,10 @@
       "stage": "string",
       "index": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2010-01-01",
+    "end_date": "2026-08-01",
+    "row_count": 12271
   },
   {
     "dataset_id": "sppi",
@@ -5864,7 +6294,10 @@
       "date": "date",
       "index": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 133
   },
   {
     "dataset_id": "sppi_1d",
@@ -5901,7 +6334,10 @@
       "section": "string",
       "index": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 1064
   },
   {
     "dataset_id": "sppi_2d",
@@ -5938,7 +6374,10 @@
       "division": "string",
       "index": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 1841
   },
   {
     "dataset_id": "sppi_3d",
@@ -5975,7 +6414,10 @@
       "group": "string",
       "index": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-04-01",
+    "row_count": 3149
   },
   {
     "dataset_id": "iowrt",
@@ -6027,7 +6469,10 @@
       "volume": "number",
       "volume_sa": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2018-01-01",
+    "end_date": "2026-07-01",
+    "row_count": 296
   },
   {
     "dataset_id": "iowrt_2d",
@@ -6081,7 +6526,10 @@
       "volume": "number",
       "volume_sa": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2018-01-01",
+    "end_date": "2026-07-01",
+    "row_count": 888
   },
   {
     "dataset_id": "iowrt_3d",
@@ -6126,7 +6574,10 @@
       "sales": "number",
       "volume": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2018-01-01",
+    "end_date": "2026-07-01",
+    "row_count": 5920
   },
   {
     "dataset_id": "ipi",
@@ -6170,7 +6621,10 @@
       "index": "number",
       "index_sa": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-07-01",
+    "row_count": 404
   },
   {
     "dataset_id": "ipi_1d",
@@ -6216,7 +6670,10 @@
       "index": "number",
       "index_sa": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-07-01",
+    "row_count": 1212
   },
   {
     "dataset_id": "ipi_2d",
@@ -6253,7 +6710,10 @@
       "division": "string",
       "index": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-07-01",
+    "row_count": 10504
   },
   {
     "dataset_id": "ipi_3d",
@@ -6290,7 +6750,10 @@
       "group": "string",
       "index": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-07-01",
+    "row_count": 28280
   },
   {
     "dataset_id": "ipi_5d",
@@ -6327,7 +6790,10 @@
       "item": "string",
       "index": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2015-01-01",
+    "end_date": "2026-07-01",
+    "row_count": 53328
   },
   {
     "dataset_id": "ipi_export",
@@ -6366,7 +6832,10 @@
     },
     "default_filters": {
       "division": "overall"
-    }
+    },
+    "start_date": "2015-01-01",
+    "end_date": "2026-07-01",
+    "row_count": 5252
   },
   {
     "dataset_id": "ipi_domestic",
@@ -6405,7 +6874,10 @@
     },
     "default_filters": {
       "division": "overall"
-    }
+    },
+    "start_date": "2015-01-01",
+    "end_date": "2026-07-01",
+    "row_count": 6060
   },
   {
     "dataset_id": "crops_state",
@@ -6453,7 +6925,10 @@
     },
     "default_filters": {
       "state": "Malaysia"
-    }
+    },
+    "start_date": "2017-01-01",
+    "end_date": "2022-01-01",
+    "row_count": 864
   },
   {
     "dataset_id": "crops_district_area",
@@ -6495,7 +6970,10 @@
       "crop_species": "string",
       "planted_area": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2017-01-01",
+    "end_date": "2017-01-01",
+    "row_count": 10555
   },
   {
     "dataset_id": "crops_district_production",
@@ -6536,7 +7014,10 @@
       "crop_species": "string",
       "production": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2017-01-01",
+    "end_date": "2017-01-01",
+    "row_count": 11002
   },
   {
     "dataset_id": "timber_production",
@@ -6575,7 +7056,10 @@
     },
     "default_filters": {
       "state": "Malaysia"
-    }
+    },
+    "start_date": "2000-01-01",
+    "end_date": "2023-01-01",
+    "row_count": 1447
   },
   {
     "dataset_id": "fish_landings",
@@ -6615,7 +7099,10 @@
     "default_filters": {
       "coast": "all",
       "state": "Malaysia"
-    }
+    },
+    "start_date": "2018-01-01",
+    "end_date": "2023-12-01",
+    "row_count": 1368
   },
   {
     "dataset_id": "mineral_extraction",
@@ -6656,7 +7143,10 @@
     },
     "default_filters": {
       "state": "Malaysia"
-    }
+    },
+    "start_date": "2016-01-01",
+    "end_date": "2021-01-01",
+    "row_count": 2112
   },
   {
     "dataset_id": "trade_sitc_1d",
@@ -6701,7 +7191,10 @@
     },
     "default_filters": {
       "section": "overall"
-    }
+    },
+    "start_date": "2000-01-01",
+    "end_date": "2026-07-01",
+    "row_count": 3509
   },
   {
     "dataset_id": "forest_reserve",
@@ -6734,7 +7227,10 @@
       "date": "date",
       "area": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2003-01-01",
+    "end_date": "2022-01-01",
+    "row_count": 20
   },
   {
     "dataset_id": "forest_reserve_state",
@@ -6769,7 +7265,10 @@
       "state": "string",
       "area": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2003-01-01",
+    "end_date": "2022-01-01",
+    "row_count": 340
   },
   {
     "dataset_id": "electricity_consumption",
@@ -6804,7 +7303,10 @@
       "sector": "string",
       "consumption": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2018-01-01",
+    "end_date": "2026-06-01",
+    "row_count": 612
   },
   {
     "dataset_id": "electricity_supply",
@@ -6839,7 +7341,10 @@
       "sector": "string",
       "supply": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2018-01-01",
+    "end_date": "2026-06-01",
+    "row_count": 612
   },
   {
     "dataset_id": "water_consumption",
@@ -6878,7 +7383,10 @@
     },
     "default_filters": {
       "state": "Malaysia"
-    }
+    },
+    "start_date": "2003-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 660
   },
   {
     "dataset_id": "water_production",
@@ -6915,7 +7423,10 @@
     },
     "default_filters": {
       "state": "Malaysia"
-    }
+    },
+    "start_date": "2000-01-01",
+    "end_date": "2022-01-01",
+    "row_count": 345
   },
   {
     "dataset_id": "water_access",
@@ -6955,7 +7466,10 @@
     "default_filters": {
       "state": "Malaysia",
       "strata": "overall"
-    }
+    },
+    "start_date": "2000-01-01",
+    "end_date": "2022-01-01",
+    "row_count": 1035
   },
   {
     "dataset_id": "air_pollution",
@@ -6990,7 +7504,10 @@
       "pollutant": "string",
       "concentration": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2017-01-01",
+    "end_date": "2024-12-01",
+    "row_count": 576
   },
   {
     "dataset_id": "ghg_emissions",
@@ -7025,7 +7542,10 @@
       "source": "string",
       "emissions": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2014-01-01",
+    "end_date": "2021-01-01",
+    "row_count": 56
   },
   {
     "dataset_id": "water_pollution_basin",
@@ -7073,7 +7593,10 @@
       "n_basins": "number",
       "proportion": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2000-01-01",
+    "end_date": "2024-01-01",
+    "row_count": 225
   },
   {
     "dataset_id": "sdg_03-3-1",
@@ -7110,7 +7633,10 @@
     },
     "default_filters": {
       "sex": "both"
-    }
+    },
+    "start_date": "2016-01-01",
+    "end_date": "2022-01-01",
+    "row_count": 21
   },
   {
     "dataset_id": "sdg_04-6-1",
@@ -7152,7 +7678,10 @@
     "default_filters": {
       "state": "Malaysia",
       "sex": "both"
-    }
+    },
+    "start_date": "2016-01-01",
+    "end_date": "2022-01-01",
+    "row_count": 714
   },
   {
     "dataset_id": "sdg_10-c-1",
@@ -7185,7 +7714,10 @@
       "date": "date",
       "value": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2016-01-01",
+    "end_date": "2022-01-01",
+    "row_count": 7
   },
   {
     "dataset_id": "sdg_16-1-1",
@@ -7225,7 +7757,10 @@
     "default_filters": {
       "state": "Malaysia",
       "sex": "both"
-    }
+    },
+    "start_date": "2016-01-01",
+    "end_date": "2022-01-01",
+    "row_count": 261
   },
   {
     "dataset_id": "sdg_16-2-2",
@@ -7268,7 +7803,10 @@
       "type": "all",
       "sex": "both",
       "age": "all"
-    }
+    },
+    "start_date": "2016-01-01",
+    "end_date": "2022-01-01",
+    "row_count": 168
   },
   {
     "dataset_id": "economic_indicators",
@@ -7321,7 +7859,10 @@
       "leading_diffusion": "string",
       "coincident_diffusion": "string"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "1991-01-01",
+    "end_date": "2026-07-01",
+    "row_count": 427
   },
   {
     "dataset_id": "msic",
@@ -7367,7 +7908,8 @@
       "exclude_bm": "string",
       "include_bm": "string"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "row_count": 1943
   },
   {
     "dataset_id": "mcoicop",
@@ -7405,7 +7947,8 @@
     },
     "default_filters": {
       "division": "overall"
-    }
+    },
+    "row_count": 343
   },
   {
     "dataset_id": "sitc",
@@ -7435,7 +7978,8 @@
       "desc_en": "string",
       "desc_bm": "string"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "row_count": 9
   },
   {
     "dataset_id": "sitc_sop",
@@ -7465,7 +8009,8 @@
       "desc_en": "string",
       "desc_bm": "string"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "row_count": 29
   },
   {
     "dataset_id": "usage_metrics",
@@ -7515,7 +8060,10 @@
       "api_hits": "number",
       "downloads": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "start_date": "2023-09-13",
+    "end_date": "2026-10-07",
+    "row_count": 1120
   },
   {
     "dataset_id": "usage_metrics_openapi",
@@ -7552,7 +8100,10 @@
     },
     "default_filters": {
       "endpoint": "overall"
-    }
+    },
+    "start_date": "2023-12-15",
+    "end_date": "2026-10-07",
+    "row_count": 19531
   },
   {
     "dataset_id": "usage_metrics_openapi_cumul",
@@ -7594,7 +8145,8 @@
       "hits": "number",
       "hits_prop": "number"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "row_count": 30
   },
   {
     "dataset_id": "arc_dosm",
@@ -7639,6 +8191,7 @@
       "release_series_en": "string",
       "release_series_bm": "string"
     },
-    "default_filters": {}
+    "default_filters": {},
+    "row_count": 311
   }
 ]

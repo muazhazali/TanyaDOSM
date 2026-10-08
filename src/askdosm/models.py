@@ -120,6 +120,9 @@ class DatasetDefinition(BaseModel):
     caveats: list[str] = Field(default_factory=list)
     expected_schema: dict[str, str]
     default_filters: dict[str, Any] = Field(default_factory=dict)
+    start_date: str | None = None
+    end_date: str | None = None
+    row_count: int | None = None
 
     @property
     def searchable_text(self) -> str:

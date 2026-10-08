@@ -123,6 +123,9 @@ export interface DatasetDefinition {
   source_agency: string
   source_url: string
   caveats: string[]
+  start_date?: string | null
+  end_date?: string | null
+  row_count?: number | null
 }
 
 export interface CatalogueMonitorState {
