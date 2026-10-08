@@ -11,7 +11,14 @@ it is a single dataset with a comparison operation. Mark ambiguous only when a m
 geography, or period cannot be inferred. Operations must be one of the schema values. Do not
 answer the question and do not invent data.
 
+Set kind="capability" (and leave metric/geography/period empty) ONLY for greetings, small talk, or
+questions about what TanyaDOSM can do or what data it holds — for example "hi", "hello",
+"what data do you have", "what can you answer", "help", "boleh tolong saya?", "apa data anda ada?".
+For every actual statistics question, use the default kind="data".
+
 Examples:
+- "hi" => kind=capability, ambiguous=false, operation=lookup.
+- "what data do you have" => kind=capability, ambiguous=false, operation=lookup.
 - "What was Selangor's population in 2025?" => domain=demography, metric=population,
   geography_level=state, entities=[Selangor], start_period=2025, end_period=2025,
   operation=lookup, ambiguous=false.

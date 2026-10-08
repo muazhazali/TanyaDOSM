@@ -158,6 +158,7 @@ function Results({ answer, runId, question, onFollowUp }: { answer: AnswerPayloa
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Answer</p>
       {headline && !answer.error && <div className="mt-3"><p className="text-4xl font-bold tracking-tight text-emerald-900">{headline.value}</p><p className="mt-1 text-sm font-medium text-emerald-700">{headline.label}</p></div>}
       <p className={`${headline ? 'mt-4 text-base' : 'mt-2 text-lg'} leading-relaxed text-slate-900`}>{friendlyAnswer(answer)}</p>
+      {!answer.error && (answer.assumptions?.length ?? 0) > 0 && <div className="mt-4 rounded-xl border border-slate-200 bg-white/70 p-3 text-xs text-slate-600"><p className="font-semibold text-slate-700">Assumptions</p><ul className="mt-1 list-disc space-y-0.5 pl-4">{answer.assumptions!.map((item) => <li key={item}>{item}</li>)}</ul></div>}
     </div>
     {showChart && <Suspense fallback={<div className="h-80 animate-pulse rounded-2xl bg-slate-100" aria-label="Loading chart" />}><ResultChart answer={answer} /></Suspense>}
     <ResultTable answer={answer} />
@@ -197,7 +198,9 @@ function FriendlyFailure({ error, question, onRetry }: { error?: string | null; 
   let message = 'Try asking about one measure, place and time period using one of the available datasets.'
   if (lowered.includes('provider') || lowered.includes('service') || lowered.includes('model')) { title = 'The answer service is temporarily unavailable'; message = 'Your question is safe. Wait a moment and try it again.' }
   else if (lowered.includes('multi') || lowered.includes('more than one dataset') || lowered.includes('forecast')) { title = 'That analysis is not supported yet'; message = 'TanyaDOSM currently answers questions from one curated dataset at a time and does not produce forecasts.' }
-  else if (lowered.includes('record') || lowered.includes('match') || lowered.includes('date')) { title = 'No matching official data was found'; message = 'Try a different year, place, or a broader time period.' }
+  else if (lowered.includes('covers data up to') || lowered.includes('no data is available for that period')) { title = 'That period is not available yet'; message = 'Try an earlier year or ask for the latest available figure.' }
+  else if (lowered.includes('multiple datasets') || lowered.includes('clarify') || lowered.includes('specify')) { title = 'Could you narrow that down?'; message = 'Several official datasets match. Add a place (for example a state) or a year so I can pick the right one.' }
+  else if (lowered.includes('record') || lowered.includes('match') || lowered.includes('date') || lowered.includes('dataset')) { title = 'No matching official data was found'; message = 'Try a different topic, place, or a broader time period — or ask "what data do you have" to see what is available.' }
   return <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5" role="alert"><div className="flex gap-3"><AlertCircle className="mt-0.5 shrink-0 text-amber-700" /><div><h3 className="font-semibold text-amber-950">{title}</h3><p className="mt-1 text-sm leading-relaxed text-amber-900">{message}</p></div></div><button onClick={onRetry} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-amber-900 px-3 py-2 text-sm font-semibold text-white"><RefreshCw size={15} /> Edit and try again</button></div>
 }
 

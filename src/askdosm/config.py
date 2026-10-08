@@ -10,7 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_prefix="ASKDOSM_", extra="ignore")
 
-    chat_model: str = "openai/gpt-oss-20b"
+    chat_model: str = "gpt-oss:120b"
     ollama_api_key: str = ""
     ollama_base_url: str = "https://ollama.com/v1"
     embedding_model: str = "@cf/baai/bge-m3"
@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     cache_ttl_hours: int = 720
     monitor_interval_hours: int = 168
     max_retries: int = 2
+    min_match_score: float = 0.10
+    clarification_gap: float = 0.03
     catalogue_path: Path = Path("data/catalogue.json")
     run_db_path: Path = Path(".askdosm-cache/runs.sqlite3")
     run_retention_days: int = 7

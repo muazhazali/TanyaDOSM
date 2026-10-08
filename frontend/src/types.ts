@@ -47,6 +47,7 @@ export interface AnswerPayload {
   trace: ExecutionTrace
   error?: string | null
   follow_ups?: string[]
+  assumptions?: string[]
 }
 
 export interface RunSummary {

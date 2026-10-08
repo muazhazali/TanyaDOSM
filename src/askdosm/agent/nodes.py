@@ -18,6 +18,7 @@ from askdosm.followups import generate_follow_ups
 from askdosm.models import (
     AnswerPayload,
     ExecutionTrace,
+    IntentKind,
     Operation,
     OutputKind,
     QueryPlan,
@@ -43,6 +44,8 @@ class NodeServices:
     embedder: Embedder | None
     embedding_cache_dir: Any
     max_retries: int = 2
+    min_match_score: float = 0.10
+    clarification_gap: float = 0.03
 
 
 def parse_question(state: AgentState, services: NodeServices) -> dict:
@@ -50,7 +53,6 @@ def parse_question(state: AgentState, services: NodeServices) -> dict:
     intent = parser.invoke([("system", INTENT_SYSTEM), ("human", state["question"])])
     intent = _normalize_intent(state["question"], intent)
     return {"intent": intent, "retry_count": state.get("retry_count", 0), "errors": []}
-
 
 def _normalize_intent(question: str, intent: QuestionIntent) -> QuestionIntent:
     """Repair obvious omissions deterministically without inventing statistical facts."""
@@ -86,19 +88,101 @@ def search_catalogue(state: AgentState, services: NodeServices) -> dict:
     return {"candidates": candidates}
 
 
+_DOMAIN_LABELS_MS = {
+    "demography": "kependudukan", "labour": "buruh", "prices": "harga",
+    "national accounts": "akaun negara", "households": "isi rumah",
+}
+
+
+def answer_capability(state: AgentState, services: NodeServices) -> dict:
+    """Describe what the assistant can answer, using only catalogue metadata."""
+    language = state["intent"].language.value if state.get("intent") else "en"
+    datasets = services.catalogue.all()
+    domains: dict[str, int] = {}
+    for definition in datasets:
+        domains[definition.domain] = domains.get(definition.domain, 0) + 1
+
+    examples = [
+        definition.title
+        for definition in datasets
+        if definition.geography_level == "national"
+    ][:5]
+    if not examples:
+        examples = [definition.title for definition in datasets[:5]]
+
+    if language == "ms":
+        domain_text = ", ".join(
+            f"{_DOMAIN_LABELS_MS.get(domain, domain)} ({count})"
+            for domain, count in sorted(domains.items())
+        )
+        answer_text = (
+            f"Saya boleh menjawab soalan tentang statistik rasmi Malaysia daripada {len(datasets)} set data "
+            f"merentas domain berikut: {domain_text}. "
+            "Tanya satu ukuran, satu tempat, dan satu tempoh — contohnya, "
+            f'"{examples[0]}" jika anda mahukan angka terkini.'
+        )
+    else:
+        domain_text = ", ".join(f"{domain} ({count})" for domain, count in sorted(domains.items()))
+        answer_text = (
+            f"I can answer questions about official Malaysian statistics from {len(datasets)} "
+            f"curated datasets across these domains: {domain_text}. "
+            "Ask about one measure, one place, and one time period — for example, "
+            f'"{examples[0]}" for the latest figure.'
+        )
+
+    payload = AnswerPayload(
+        answer=answer_text,
+        follow_ups=[
+            "What is Malaysia's latest population?",
+            "Show unemployment trends in Johor since 2020.",
+        ],
+        trace=ExecutionTrace(intent=state.get("intent"), token_usage=getattr(services.llm, "usage", None)),
+    )
+    return {"answer": payload, "final_status": "capability"}
+
+
+def _infer_assumptions(intent: QuestionIntent, definition: Any) -> list[str]:
+    """Note any geography or period we supplied by default so the answer is honest."""
+    notes: list[str] = []
+    if not intent.geography_level:
+        if definition.geography_level == "national":
+            notes.append("Assumed national-level data because no place was specified.")
+        else:
+            notes.append(f"Assumed {definition.geography_level}-level data because no place was specified.")
+    if not (intent.start_period or intent.end_period or intent.latest):
+        notes.append("Used the latest available period because no time period was specified.")
+    return notes
+
+
 def select_dataset(state: AgentState, services: NodeServices) -> dict:
     intent = state["intent"]
     if intent.multi_dataset:
         return {"final_status": "unsupported", "errors": ["This version supports one dataset per question."]}
-    if intent.ambiguous:
-        return {"final_status": "clarification", "errors": [intent.clarification or "Please clarify the metric, geography, or period."]}
     candidates = state.get("candidates", [])
-    if not candidates or candidates[0].score < 0.15:
+    floor = services.min_match_score
+    if not candidates or candidates[0].score < floor:
+        # Nothing in the catalogue plausibly matches the topic: ask for one that does.
+        if intent.clarification:
+            return {"final_status": "clarification", "errors": [intent.clarification]}
         return {"final_status": "unsupported", "errors": ["No supported dataset confidently matches this question."]}
-    if len(candidates) > 1 and candidates[0].score - candidates[1].score < 0.015:
-        return {"final_status": "clarification", "errors": ["The question matches multiple datasets. Please specify national or state-level data."]}
+    # A clear leader on the same topic proceeds even if the model flagged ambiguity,
+    # because the deterministic ranking already resolved it (stopwords removed, ties
+    # broken by the requested geography). Only a near-tie between *different topics*
+    # with no geography given invites a question; same-topic ties default to national.
+    gap = services.clarification_gap
+    if len(candidates) > 1 and candidates[0].score - candidates[1].score < gap:
+        leader = services.catalogue.get(candidates[0].dataset_id)
+        runner = services.catalogue.get(candidates[1].dataset_id)
+        if leader.domain != runner.domain and not intent.geography_level:
+            return {"final_status": "clarification", "errors": [intent.clarification or "The question matches multiple datasets. Please specify national or state-level data."]}
     selected = services.catalogue.get(candidates[0].dataset_id)
-    return {"selected_dataset": selected, "selection_reason": candidates[0].reason, "final_status": "selected"}
+    assumptions = _infer_assumptions(intent, selected)
+    return {
+        "selected_dataset": selected,
+        "selection_reason": candidates[0].reason,
+        "assumptions": assumptions,
+        "final_status": "selected",
+    }
 
 
 def inspect_schema(state: AgentState, services: NodeServices) -> dict:
@@ -130,9 +214,33 @@ def build_query_plan(state: AgentState, services: NodeServices) -> dict:
         "frequency": definition.frequency,
         "previous_errors": state.get("errors", []),
     }
-    plan = planner.invoke([("system", PLAN_SYSTEM), ("human", json.dumps(context))])
+    try:
+        plan = planner.invoke([("system", PLAN_SYSTEM), ("human", json.dumps(context))])
+    except Exception as exc:
+        # A malformed or rejected plan should fail this question, not abort the run.
+        return {
+            "final_status": "unsupported",
+            "errors": [f"The data request could not be prepared ({type(exc).__name__})."],
+        }
     if plan.dataset_id != definition.dataset_id:
-        raise ValueError("Planner returned an unregistered or different dataset ID")
+        # The planner cannot change the dataset. Try once to re-select from the
+        # remaining candidates; if nothing better remains, fail gracefully instead
+        # of raising and aborting the whole run.
+        remaining = [
+            candidate for candidate in state.get("candidates", [])
+            if candidate.dataset_id != definition.dataset_id
+        ]
+        if remaining and state.get("reselect_count", 0) < 1:
+            return {
+                "candidates": remaining,
+                "reselect_count": state.get("reselect_count", 0) + 1,
+                "final_status": "reselect",
+                "errors": ["The dataset selection was revised to better match the question."],
+            }
+        return {
+            "final_status": "unsupported",
+            "errors": ["The question could not be matched to a single supported dataset."],
+        }
     filters = []
     for item in plan.filters:
         if item.column == "date" and isinstance(item.value, str):
@@ -145,7 +253,15 @@ def build_query_plan(state: AgentState, services: NodeServices) -> dict:
 
 
 def execute_query(state: AgentState, services: NodeServices) -> dict:
-    frame = execute_plan(state["source_frame"], state["selected_dataset"], state["query_plan"])
+    try:
+        frame = execute_plan(state["source_frame"], state["selected_dataset"], state["query_plan"])
+    except Exception as exc:
+        # A rejected plan (unknown column, bad filter) fails this question cleanly
+        # instead of aborting the whole run.
+        return {
+            "final_status": "unsupported",
+            "errors": [f"The data request could not be run against the selected dataset ({type(exc).__name__})."],
+        }
     if state["intent"].latest:
         frame = resolve_latest(frame)
     return {"query_frame": frame}
@@ -325,6 +441,7 @@ def generate_response(state: AgentState, services: NodeServices) -> dict:
         source=source,
         trace=trace,
         follow_ups=follow_ups,
+        assumptions=state.get("assumptions", []),
     )
     return {"answer": payload, "final_status": "complete"}
 

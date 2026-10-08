@@ -8,7 +8,7 @@ from askdosm.agent.nodes import NodeServices
 from askdosm.agent.nodes import build_query_plan, generate_response
 from askdosm.catalogue import Catalogue
 from askdosm.models import (
-    AnalysisResult, ContextResolution, FilterSpec, Operation, QueryPlan, QuestionIntent,
+    AnalysisResult, ContextResolution, FilterSpec, IntentKind, Operation, QueryPlan, QuestionIntent,
     ValidationResult, VisualizationSpec,
 )
 from askdosm.agent.graph import TanyaDOSMService
@@ -80,6 +80,67 @@ def test_graph_rejects_multi_dataset_question(tmp_path):
     state = build_graph(services).invoke({"question": "Compare population and unemployment", "retry_count": 0, "errors": []})
     assert state["answer"].error
     assert "one dataset" in state["answer"].answer
+
+
+def test_capability_question_lists_available_data(tmp_path):
+    intent = QuestionIntent(kind=IntentKind.CAPABILITY)
+    unused_plan = QueryPlan(dataset_id="population_state", columns=["population"], metric="population", operation=Operation.LOOKUP)
+    services = NodeServices(
+        catalogue=Catalogue(Path("data/catalogue.json")), cache=FakeCache(pd.DataFrame()), llm=FakeLLM(intent, unused_plan),
+        embedder=None, embedding_cache_dir=tmp_path,
+    )
+    state = build_graph(services).invoke({"question": "what data do you have", "retry_count": 0, "errors": []})
+    assert state["answer"].error is None
+    assert "datasets" in state["answer"].answer
+    assert state["final_status"] == "capability"
+
+
+def test_vague_but_answerable_question_proceeds_with_assumptions(tmp_path):
+    intent = QuestionIntent(metric="population")
+    plan = QueryPlan(
+        dataset_id="population_malaysia", columns=["date", "population"], metric="population",
+        operation=Operation.LOOKUP,
+        filters=[FilterSpec(column="date", operator="eq", value="2025-01-01")],
+    )
+    frame = pd.DataFrame(
+        {"date": pd.to_datetime(["2025-01-01"]), "sex": ["both"], "age": ["overall"],
+         "ethnicity": ["overall"], "population": [34000.0]}
+    )
+    services = NodeServices(
+        catalogue=Catalogue(Path("data/catalogue.json")), cache=FakeCache(frame), llm=FakeLLM(intent, plan),
+        embedder=None, embedding_cache_dir=tmp_path, min_match_score=0.10, clarification_gap=0.03,
+    )
+    state = build_graph(services).invoke({"question": "population", "retry_count": 0, "errors": []})
+    assert state["answer"].error is None
+    assert state["answer"].assumptions
+    assert any("national" in note for note in state["answer"].assumptions)
+
+
+def test_off_topic_question_is_rejected(tmp_path):
+    intent = QuestionIntent(metric="happiness")
+    unused_plan = QueryPlan(dataset_id="population_state", columns=["population"], metric="population", operation=Operation.LOOKUP)
+    services = NodeServices(
+        catalogue=Catalogue(Path("data/catalogue.json")), cache=FakeCache(pd.DataFrame()), llm=FakeLLM(intent, unused_plan),
+        embedder=None, embedding_cache_dir=tmp_path, min_match_score=0.10, clarification_gap=0.03,
+    )
+    state = build_graph(services).invoke({"question": "how many people are happy today", "retry_count": 0, "errors": []})
+    assert state["answer"].error
+
+
+def test_planner_dataset_mismatch_recovers_without_crashing(tmp_path):
+    intent = QuestionIntent(metric="population", geography_level="state", entities=["Selangor"])
+    # Planner insists on a different dataset than the one that was selected first.
+    mismatched_plan = QueryPlan(
+        dataset_id="population_malaysia", columns=["date", "population"], metric="population",
+        operation=Operation.LOOKUP,
+    )
+    services = NodeServices(
+        catalogue=Catalogue(Path("data/catalogue.json")), cache=FakeCache(pd.DataFrame()), llm=FakeLLM(intent, mismatched_plan),
+        embedder=None, embedding_cache_dir=tmp_path,
+    )
+    state = build_graph(services).invoke({"question": "population of Selangor", "retry_count": 0, "errors": []})
+    assert state["final_status"] in {"failed", "unsupported"}
+    assert state["answer"].error
 
 
 def test_latest_instruction_is_not_used_as_a_date_filter(tmp_path):

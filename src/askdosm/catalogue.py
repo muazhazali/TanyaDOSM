@@ -18,6 +18,21 @@ from askdosm.models import DatasetCandidate, DatasetDefinition, QuestionIntent
 logger = logging.getLogger(__name__)
 
 
+# Filler words that carry no statistical meaning. Without this filter, common
+# words like "you", "data", "the" or "how" inflate lexical scores and let
+# off-topic questions clear the match floor.
+STOPWORDS = {
+    "the", "and", "for", "are", "was", "were", "you", "your", "data", "what",
+    "which", "how", "many", "much", "can", "could", "would", "should", "have",
+    "has", "had", "get", "give", "show", "tell", "about", "with", "from",
+    "that", "this", "these", "those", "please", "want", "need", "know", "any",
+    "all", "some", "its", "their", "our", "not", "but", "out", "here", "there",
+    "ada", "anda", "saya", "apa", "yang", "untuk", "dan", "atau", "boleh",
+    "tolong", "berapa", "mana", "tahu", "mahu", "ini", "itu", "dengan", "pada",
+    "adalah", "tak", "tidak", "kita", "mereka", "dia",
+}
+
+
 class Embedder(Protocol):
     def embed_documents(self, texts: list[str]) -> list[list[float]]: ...
 
@@ -40,7 +55,7 @@ class Catalogue:
             raise ValueError(f"Unsupported dataset ID: {dataset_id}") from exc
 
     def search_lexical(self, query: str, intent: QuestionIntent | None = None) -> list[DatasetCandidate]:
-        tokens = set(re.findall(r"[\w.-]+", query.casefold()))
+        tokens = {token for token in re.findall(r"[\w.-]+", query.casefold()) if token not in STOPWORDS}
         candidates: list[DatasetCandidate] = []
         for dataset in self.all():
             haystack = dataset.searchable_text.casefold()
@@ -54,12 +69,21 @@ class Catalogue:
                 if intent.domain and intent.domain.casefold() in {dataset.domain.casefold(), haystack}:
                     score += 0.15
                     reasons.append("domain matched")
-                if intent.metric and intent.metric.casefold() in haystack:
-                    score += 0.25
-                    reasons.append("metric matched")
                 if intent.metric:
                     metric_cf = intent.metric.casefold()
-                    aliases_cf = {a.casefold() for a in dataset.aliases} | {dataset.title.casefold()}
+                    measure_terms = {dataset.title.casefold()}
+                    for measure in dataset.measures:
+                        measure_terms.add(measure.name.casefold())
+                        measure_terms.update(alias.casefold() for alias in measure.aliases)
+                    aliases_cf = {alias.casefold() for alias in dataset.aliases} | {dataset.title.casefold()}
+                    if metric_cf in measure_terms:
+                        # The metric names an actual measure here: the strongest signal.
+                        score += 0.35
+                        reasons.append("metric matched")
+                    elif metric_cf in haystack:
+                        # The metric only appears somewhere in the metadata: weak.
+                        score += 0.1
+                        reasons.append("metric mentioned")
                     if metric_cf in aliases_cf:
                         score += 0.15
                         reasons.append("exact metric alias match")
@@ -77,7 +101,7 @@ class Catalogue:
     ) -> list[DatasetCandidate]:
         lexical = {candidate.dataset_id: candidate for candidate in self.search_lexical(query, intent)}
         if embedder is None:
-            return sorted(lexical.values(), key=lambda candidate: candidate.score, reverse=True)
+            return self._rank(lexical, intent)
 
         try:
             datasets = self.all()
@@ -105,4 +129,30 @@ class Catalogue:
             # In particular, provider response validation errors should not abort a run
             # when the deterministic metadata search can still select a dataset.
             logger.warning("Semantic catalogue search failed; using lexical ranking: %s", exc)
-        return sorted(lexical.values(), key=lambda candidate: candidate.score, reverse=True)
+        return self._rank(lexical, intent)
+
+    def _rank(
+        self,
+        candidates: dict[str, DatasetCandidate],
+        intent: QuestionIntent | None,
+    ) -> list[DatasetCandidate]:
+        """Rank candidates deterministically.
+
+        Ties on score are common because same-topic datasets differ only by
+        geography. When scores are effectively equal, prefer the geography the
+        intent named, then national, then state, then district, and finally fall
+        back to the dataset id so the order is stable rather than arbitrary.
+        """
+        geography_priority = {"national": 0, "state": 1, "district": 2}
+        requested = intent.geography_level if intent else None
+
+        def sort_key(candidate: DatasetCandidate) -> tuple:
+            dataset = self._datasets.get(candidate.dataset_id)
+            geography = dataset.geography_level if dataset else "district"
+            geography_rank = geography_priority.get(geography, 3)
+            # Named geography first; otherwise prefer the broadest (national) so a
+            # vague question yields a sensible default.
+            geography_pref = 0 if requested and geography == requested else 1
+            return (-round(candidate.score, 4), geography_pref, geography_rank, candidate.dataset_id)
+
+        return sorted(candidates.values(), key=sort_key)

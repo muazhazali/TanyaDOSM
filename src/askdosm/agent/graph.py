@@ -16,7 +16,7 @@ from askdosm.agent.state import AgentState
 from askdosm.catalogue import Catalogue
 from askdosm.config import Settings, get_settings
 from askdosm.data import DatasetCache
-from askdosm.models import AnswerPayload, ContextResolution
+from askdosm.models import AnswerPayload, ContextResolution, IntentKind
 from askdosm.agent.prompts import CONTEXT_SYSTEM
 from askdosm.providers import create_chat_model, create_embedder
 
@@ -31,6 +31,7 @@ def _artifact_event(node_name: str, update: dict[str, Any]) -> dict[str, Any] | 
         "validate_result": ("validation", "validation"),
         "generate_visualization": ("visualization", "visualization"),
         "generate_response": ("result", "answer"),
+        "answer_capability": ("result", "answer"),
         "graceful_failure": ("result", "answer"),
     }
     if node_name == "select_dataset":
@@ -121,6 +122,7 @@ def build_graph(services: NodeServices):
     graph = StateGraph(AgentState)
     graph.add_node("parse_question", _observed_node("parse_question", nodes.parse_question, services))
     graph.add_node("search_catalogue", _observed_node("search_catalogue", nodes.search_catalogue, services))
+    graph.add_node("answer_capability", _observed_node("answer_capability", nodes.answer_capability, services))
     graph.add_node("select_dataset", _observed_node("select_dataset", nodes.select_dataset, services))
     graph.add_node("inspect_schema", _observed_node("inspect_schema", nodes.inspect_schema, services))
     graph.add_node("build_query_plan", _observed_node("build_query_plan", nodes.build_query_plan, services))
@@ -132,7 +134,11 @@ def build_graph(services: NodeServices):
     graph.add_node("graceful_failure", _observed_node("graceful_failure", nodes.graceful_failure, services))
 
     graph.add_edge(START, "parse_question")
-    graph.add_edge("parse_question", "search_catalogue")
+    graph.add_conditional_edges(
+        "parse_question",
+        lambda state: "answer_capability" if state["intent"].kind == IntentKind.CAPABILITY else "search_catalogue",
+        {"answer_capability": "answer_capability", "search_catalogue": "search_catalogue"},
+    )
     graph.add_edge("search_catalogue", "select_dataset")
     graph.add_conditional_edges(
         "select_dataset",
@@ -140,8 +146,18 @@ def build_graph(services: NodeServices):
         {"inspect_schema": "inspect_schema", "graceful_failure": "graceful_failure"},
     )
     graph.add_edge("inspect_schema", "build_query_plan")
-    graph.add_edge("build_query_plan", "execute_query")
-    graph.add_edge("execute_query", "analyze_result")
+    graph.add_conditional_edges(
+        "build_query_plan",
+        lambda state: "select_dataset" if state.get("final_status") == "reselect" else (
+            "execute_query" if "query_plan" in state else "graceful_failure"
+        ),
+        {"select_dataset": "select_dataset", "execute_query": "execute_query", "graceful_failure": "graceful_failure"},
+    )
+    graph.add_conditional_edges(
+        "execute_query",
+        lambda state: "analyze_result" if "query_frame" in state else "graceful_failure",
+        {"analyze_result": "analyze_result", "graceful_failure": "graceful_failure"},
+    )
     graph.add_edge("analyze_result", "validate_result")
     graph.add_conditional_edges(
         "validate_result",
@@ -156,6 +172,7 @@ def build_graph(services: NodeServices):
     )
     graph.add_edge("generate_visualization", "generate_response")
     graph.add_edge("generate_response", END)
+    graph.add_edge("answer_capability", END)
     graph.add_edge("graceful_failure", END)
     return graph.compile()
 
@@ -174,6 +191,8 @@ class TanyaDOSMService:
             embedder=embedder,
             embedding_cache_dir=self.settings.cache_dir / "embeddings",
             max_retries=self.settings.max_retries,
+            min_match_score=self.settings.min_match_score,
+            clarification_gap=self.settings.clarification_gap,
         )
         self.graph = build_graph(services)
         self.llm = llm

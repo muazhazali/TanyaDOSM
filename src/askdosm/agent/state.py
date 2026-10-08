@@ -33,7 +33,9 @@ class AgentState(TypedDict, total=False):
     visualization: VisualizationSpec
     answer: AnswerPayload
     retry_count: int
+    reselect_count: int
     errors: list[str]
+    assumptions: list[str]
     cache_freshness: str | None
     final_status: str
     metadata: dict[str, Any]

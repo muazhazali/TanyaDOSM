@@ -51,10 +51,16 @@ class OutputKind(StrEnum):
     TABLE = "table"
 
 
+class IntentKind(StrEnum):
+    DATA = "data"
+    CAPABILITY = "capability"
+
+
 class QuestionIntent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     language: Language = Language.EN
+    kind: IntentKind = IntentKind.DATA
     domain: str | None = None
     metric: str | None = None
     geography_level: Literal["national", "state", "district"] | None = None
@@ -248,6 +254,7 @@ class AnswerPayload(BaseModel):
     trace: ExecutionTrace = Field(default_factory=ExecutionTrace)
     error: str | None = None
     follow_ups: list[str] = Field(default_factory=list)
+    assumptions: list[str] = Field(default_factory=list)
 class ContextResolution(BaseModel):
     """A standalone question reconstructed from bounded conversation context."""
 
