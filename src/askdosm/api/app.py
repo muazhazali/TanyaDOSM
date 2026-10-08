@@ -106,12 +106,15 @@ def create_app(settings: Settings | None = None, service_factory=None) -> FastAP
         llm_status = str(health_cache["llm"])
         embedding_status = str(health_cache["embeddings"])
         overall = "ready" if catalogue_status == llm_status == "ready" else "degraded"
+        busy = manager.busy_state()
         return HealthStatus(
             status=overall,
             database="ready",
             catalogue=catalogue_status,
             llm=llm_status,
             embeddings=embedding_status,
+            busy=busy["busy"],
+            queue_depth=busy["queue_depth"],
         )
 
     @app.get("/api/datasets")

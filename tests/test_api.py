@@ -117,6 +117,8 @@ def test_health_reports_hosted_providers(tmp_path, monkeypatch):
         "catalogue": "ready",
         "llm": "ready",
         "embeddings": "unavailable",
+        "busy": False,
+        "queue_depth": 0,
     }
 
 

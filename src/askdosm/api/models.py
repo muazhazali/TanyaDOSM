@@ -95,3 +95,5 @@ class HealthStatus(BaseModel):
     catalogue: str
     llm: str
     embeddings: str
+    busy: bool = False
+    queue_depth: int = 0

@@ -59,6 +59,15 @@ class RunManager:
         except ValueError:
             return None
 
+    def busy_state(self) -> dict:
+        """Report whether the single worker is occupied, for a public status light.
+
+        Exposes only counts and a boolean — never run content — so it is safe to
+        surface on the health endpoint.
+        """
+        queued = len([item for item in list(self.queue._queue) if item not in self._cancelled])
+        return {"busy": self._active_run_id is not None, "queue_depth": queued}
+
     async def cancel(self, run_id: str) -> bool:
         snapshot = await self.store.get_run(run_id)
         if snapshot is None:

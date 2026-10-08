@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, BarChart3, Check, ChevronDown, Circle, Clock3, Copy, Database, Download, ExternalLink, FileQuestion, LoaderCircle, Menu, MoreHorizontal, Pencil, RefreshCw, Search, Send, Share2, ThumbsDown, ThumbsUp, Trash2, X } from 'lucide-react'
+import { AlertCircle, BarChart3, BookOpen, Check, ChevronDown, Circle, Clock3, Copy, Database, Download, ExternalLink, Lightbulb, LoaderCircle, Menu, MoreHorizontal, Pencil, RefreshCw, Search, Send, Share2, Sparkles, ThumbsDown, ThumbsUp, Trash2, X } from 'lucide-react'
 import { api, ApiError, subscribeToRun } from './api'
 import { initialStreamState, latestArtifact, streamReducer } from './runState'
 import type { AnswerPayload, DatasetDefinition, RunEvent, RunSnapshot, RunStatus, TokenUsage } from './types'
@@ -12,19 +12,28 @@ function isNotFound(error: unknown): boolean {
 const ResultChart = lazy(() => import('./Chart').then((module) => ({ default: module.ResultChart })))
 
 const examples = [
-  { label: 'Find a number', question: "What is Malaysia's latest population?" },
-  { label: 'Compare places', question: 'Compare Johor and Selangor population in 2025.' },
-  { label: 'View a trend', question: 'Show unemployment trends in Johor since 2020.' },
-  { label: 'Tanya dalam BM', question: 'Negeri mana mempunyai penduduk paling ramai pada tahun 2025?' },
+  { label: 'Find a number', topic: 'Population', icon: '👥', question: "What is Malaysia's latest population?" },
+  { label: 'Compare places', topic: 'Population', icon: '⚖️', question: 'Compare Johor and Selangor population in 2025.' },
+  { label: 'View a trend', topic: 'Jobs', icon: '📈', question: 'Show unemployment trends in Johor since 2020.' },
+  { label: 'Cost of living', topic: 'Prices', icon: '🛒', question: 'Compare inflation in Johor and Selangor over the latest year.' },
+  { label: 'Income', topic: 'Income', icon: '💰', question: 'What is the average household income in Selangor?' },
+  { label: 'Combine two topics', topic: 'Mixed', icon: '🧮', question: 'What is the GDP per capita for Malaysia?' },
+  { label: 'Tanya dalam BM', topic: 'Bahasa Melayu', icon: '🇲🇾', question: 'Negeri mana mempunyai penduduk paling ramai pada tahun 2025?' },
+]
+
+const howItWorks = [
+  { icon: '💬', title: 'You ask in plain words', text: 'Type a question in English or Bahasa Melayu, like “How many people live in Selangor?”' },
+  { icon: '🔎', title: 'We find official data', text: 'TanyaDOSM picks the right DOSM dataset, retrieves the figures, and checks the result.' },
+  { icon: '✅', title: 'You get the answer + source', text: 'Every answer shows the number, a simple explanation, and a link to the official source.' },
 ]
 
 const nodeLabels: Record<string, string> = {
-  parse_question: 'Understanding your question', search_catalogue: 'Finding official data', select_dataset: 'Choosing the best dataset',
-  inspect_schema: 'Checking the source', build_query_plan: 'Preparing the data request', execute_query: 'Retrieving figures',
-  analyze_result: 'Working out the answer', validate_result: 'Checking the result', generate_visualization: 'Preparing the chart',
-  generate_response: 'Writing the answer', graceful_failure: 'Preparing a helpful response',
-  plan_multi: 'Planning across datasets', validate_multi: 'Checking the plan', execute_multi: 'Retrieving and combining figures',
-  generate_multi_response: 'Writing the combined answer',
+  parse_question: 'Reading your question', search_catalogue: 'Finding the right official data', select_dataset: 'Choosing the best data for your question',
+  inspect_schema: 'Checking what the data contains', build_query_plan: 'Preparing your request', execute_query: 'Looking up the figures',
+  analyze_result: 'Working out the answer', validate_result: 'Double-checking the result', generate_visualization: 'Preparing the chart',
+  generate_response: 'Writing your answer', graceful_failure: 'Preparing a helpful response',
+  plan_multi: 'Planning which data to combine', validate_multi: 'Checking the plan', execute_multi: 'Looking up and combining figures',
+  generate_multi_response: 'Writing your combined answer',
 }
 
 const publicSteps = [
@@ -39,6 +48,15 @@ function StatusPill({ status }: { status: RunStatus }) {
   const labels: Record<RunStatus, string> = { queued: 'Waiting', running: 'Working', completed: 'Verified', failed: 'Needs attention', interrupted: 'Stopped' }
   const colors: Record<RunStatus, string> = { queued: 'bg-amber-100 text-amber-800', running: 'bg-blue-100 text-blue-800', completed: 'bg-emerald-100 text-emerald-800', failed: 'bg-red-100 text-red-800', interrupted: 'bg-slate-200 text-slate-700' }
   return <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${colors[status]}`}>{labels[status]}</span>
+}
+
+function ServiceAvailability({ health, active }: { health?: { busy?: boolean; queue_depth?: number } | null; active: boolean }) {
+  const reachable = health !== undefined && health !== null
+  const busy = active || !!health?.busy
+  const depth = health?.queue_depth ?? 0
+  if (!reachable) return <span className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-500"><span className="h-2 w-2 rounded-full bg-slate-400" />Checking service…</span>
+  if (busy) return <span className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900"><LoaderCircle size={13} className="animate-spin" />Busy — processing a question{depth > 0 ? ` · ${depth} waiting` : ''}</span>
+  return <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-900"><span className="h-2 w-2 rounded-full bg-emerald-500" />Free — ready for your question</span>
 }
 
 function formatCell(value: unknown): string {
@@ -141,6 +159,46 @@ function UsageBadge({ usage }: { usage: TokenUsage }) {
   return <details className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600"><summary className="cursor-pointer font-semibold text-slate-700">Token usage & estimated cost</summary><div className="mt-3 grid gap-2 sm:grid-cols-2"><div><span className="text-slate-400">Model</span><p className="font-medium text-slate-800">{usage.model || '—'}</p></div><div><span className="text-slate-400">Estimated cost</span><p className="font-medium text-slate-800">{formatCost(usage.estimated_cost_usd)}</p></div><div><span className="text-slate-400">Prompt tokens</span><p className="font-medium text-slate-800">{usage.prompt_tokens.toLocaleString()}{usage.cached_prompt_tokens > 0 && <span className="text-slate-400"> ({usage.cached_prompt_tokens.toLocaleString()} cached)</span>}</p></div><div><span className="text-slate-400">Completion tokens</span><p className="font-medium text-slate-800">{usage.completion_tokens.toLocaleString()}</p></div><div><span className="text-slate-400">Total tokens</span><p className="font-medium text-slate-800">{usage.total_tokens.toLocaleString()}</p></div><div><span className="text-slate-400">Pricing (per 1M)</span><p className="font-medium text-slate-800">${usage.input_price_per_m.toFixed(2)} in · ${usage.cached_input_price_per_m.toFixed(2)} cached · ${usage.output_price_per_m.toFixed(2)} out</p></div></div></details>
 }
 
+function GettingStarted({ onChoose }: { onChoose: (question: string) => void }) {
+  const topics = useMemo(() => [...new Set(examples.map((example) => example.topic))], [])
+  const [topic, setTopic] = useState<string>('All')
+  const shown = topic === 'All' ? examples : examples.filter((example) => example.topic === topic)
+  return <section className="mt-8 space-y-8">
+    <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5">
+      <div className="flex items-center gap-2 font-bold text-emerald-900"><Sparkles size={18} /> New here? Start in 10 seconds</div>
+      <p className="mt-1 text-sm text-emerald-800">Pick an example below, or type your own question in English or Bahasa Melayu.</p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {['All', ...topics].map((item) => <button key={item} onClick={() => setTopic(item)} className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${topic === item ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300 bg-white text-slate-700 hover:border-emerald-400'}`}>{item}</button>)}
+      </div>
+    </div>
+    <div className="grid gap-3 sm:grid-cols-2">
+      {shown.map((example) => <button key={example.question} onClick={() => onChoose(example.question)} className="group rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-emerald-400 hover:shadow-sm">
+        <span className="flex items-center gap-2 text-sm font-semibold text-emerald-800"><span aria-hidden="true">{example.icon}</span>{example.label}</span>
+        <span className="mt-2 block text-sm text-slate-600">{example.question}</span>
+        <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 opacity-0 transition group-hover:opacity-100">Try this <Send size={12} /></span>
+      </button>)}
+    </div>
+    <div>
+      <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700"><BookOpen size={16} /> How it works</h2>
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        {howItWorks.map((step, index) => <div key={step.title} className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-400"><span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-700">{index + 1}</span><span aria-hidden="true">{step.icon}</span></div>
+          <p className="mt-2 font-semibold text-slate-800">{step.title}</p>
+          <p className="mt-1 text-sm text-slate-600">{step.text}</p>
+        </div>)}
+      </div>
+    </div>
+    <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+      <ThumbsUp size={16} className="mt-0.5 shrink-0 text-emerald-600" />
+      <p><span className="font-semibold text-slate-800">Answers come from official DOSM data.</span> TanyaDOSM never makes up numbers — if it cannot find a match, it tells you instead of guessing.</p>
+    </div>
+  </section>
+}
+
+function QuestionTips() {
+  return <p className="mt-2 flex items-start gap-1.5 text-xs text-slate-500"><Lightbulb size={13} className="mt-0.5 shrink-0 text-amber-500" /><span>Tip: include a <span className="font-semibold text-slate-600">topic</span>, a <span className="font-semibold text-slate-600">place</span>, and a <span className="font-semibold text-slate-600">year</span> — e.g. “unemployment in Johor in 2024”.</span></p>
+}
+
 function Results({ answer, runId, question, onFollowUp }: { answer: AnswerPayload; runId: string; question: string; onFollowUp?: (value: string) => void }) {
   const [copied, setCopied] = useState<'answer' | 'link' | null>(null)
   const [feedback, setFeedback] = useState<boolean | null>(null)
@@ -160,7 +218,8 @@ function Results({ answer, runId, question, onFollowUp }: { answer: AnswerPayloa
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Answer</p>
       {headline && !answer.error && <div className="mt-3"><p className="text-4xl font-bold tracking-tight text-emerald-900">{headline.value}</p><p className="mt-1 text-sm font-medium text-emerald-700">{headline.label}</p></div>}
       <p className={`${headline ? 'mt-4 text-base' : 'mt-2 text-lg'} leading-relaxed text-slate-900`}>{friendlyAnswer(answer)}</p>
-      {!answer.error && (answer.assumptions?.length ?? 0) > 0 && <div className="mt-4 rounded-xl border border-slate-200 bg-white/70 p-3 text-xs text-slate-600"><p className="font-semibold text-slate-700">Assumptions</p><ul className="mt-1 list-disc space-y-0.5 pl-4">{answer.assumptions!.map((item) => <li key={item}>{item}</li>)}</ul></div>}
+      {!answer.error && answer.source && <p className="mt-3 flex items-center gap-1.5 text-xs text-emerald-700"><Check size={13} /> From official data · {answer.source.agency}{(answer.sources?.length ?? 0) > 1 ? ` and ${answer.sources!.length - 1} more` : ''}</p>}
+      {!answer.error && (answer.assumptions?.length ?? 0) > 0 && <div className="mt-4 rounded-xl border border-slate-200 bg-white/70 p-3 text-xs text-slate-600"><p className="flex items-center gap-1.5 font-semibold text-slate-700"><Lightbulb size={13} className="text-amber-500" /> What I assumed</p><ul className="mt-1 list-disc space-y-0.5 pl-4">{answer.assumptions!.map((item) => <li key={item}>{item}</li>)}</ul></div>}
     </div>
     {showChart && <Suspense fallback={<div className="h-80 animate-pulse rounded-2xl bg-slate-100" aria-label="Loading chart" />}><ResultChart answer={answer} /></Suspense>}
     <ResultTable answer={answer} />
@@ -235,6 +294,14 @@ function DatasetGuide({ datasets, loading, onChoose }: { datasets?: DatasetDefin
   const [domain, setDomain] = useState('all')
   const [limit, setLimit] = useState(8)
   const domains = useMemo(() => [...new Set((datasets ?? []).map((dataset) => dataset.domain))].sort(), [datasets])
+  const friendlyTopics: Array<{ label: string; icon: string; domain: string; question: string }> = [
+    { label: 'Population', icon: '👥', domain: 'demography', question: 'Which state has the highest population?' },
+    { label: 'Jobs', icon: '💼', domain: 'labour markets', question: 'Show unemployment trends in Malaysia since 2020.' },
+    { label: 'Cost of living', icon: '🛒', domain: 'prices', question: 'Compare inflation in Johor and Selangor over the latest year.' },
+    { label: 'Income', icon: '💰', domain: 'households', question: 'What is the average household income in Selangor?' },
+    { label: 'Economy', icon: '📊', domain: 'national accounts', question: "What is Malaysia's GDP?" },
+    { label: 'Education', icon: '🎓', domain: 'education', question: 'How many students are enrolled in Malaysia?' },
+  ]
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase()
     return (datasets ?? []).filter((dataset) => (domain === 'all' || dataset.domain === domain) && (!needle || [dataset.title, dataset.description, dataset.domain, ...dataset.aliases].join(' ').toLowerCase().includes(needle)))
@@ -247,7 +314,7 @@ function DatasetGuide({ datasets, loading, onChoose }: { datasets?: DatasetDefin
     cpi_state_inflation: 'Compare inflation in Johor and Selangor over the latest year.',
   }
   const exampleFor = (dataset: DatasetDefinition) => examplesById[dataset.dataset_id] || `What is the latest figure in ${dataset.title}?`
-  return <details className="mt-8 rounded-2xl border border-slate-200 bg-white p-5"><summary className="flex cursor-pointer list-none items-center justify-between gap-4"><span><span className="flex items-center gap-2 font-bold"><Database size={18} className="text-emerald-700" /> What can I ask?</span><span className="mt-1 block text-sm font-normal text-slate-500">Search {datasets?.length ? `${datasets.length} ` : ''}registered official datasets and try a plain-language example.</span></span><ChevronDown className="shrink-0" /></summary>{loading && <p className="mt-4 text-sm text-slate-500">Loading available data…</p>}{!loading && <><div className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_14rem]"><label className="relative"><span className="sr-only">Search datasets</span><Search className="pointer-events-none absolute left-3 top-3 text-slate-400" size={17} /><input value={search} onChange={(event) => { setSearch(event.target.value); setLimit(8) }} placeholder="Search population, prices, jobs…" className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-emerald-500" /></label><label><span className="sr-only">Filter by topic</span><select value={domain} onChange={(event) => { setDomain(event.target.value); setLimit(8) }} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-emerald-500"><option value="all">All topics</option>{domains.map((item) => <option key={item} value={item}>{item.replaceAll('_', ' ')}</option>)}</select></label></div><p className="mt-3 text-xs text-slate-600">Showing {Math.min(filtered.length, limit)} of {filtered.length} matching datasets.</p><div className="mt-4 grid gap-3 sm:grid-cols-2">{filtered.slice(0, limit).map((dataset) => <article key={dataset.dataset_id} className="rounded-xl border border-slate-200 p-4"><h3 className="font-semibold">{dataset.title}</h3><p className="mt-1 text-xs capitalize text-slate-600">{dataset.geography_level} · {dataset.frequency} · {dataset.domain.replaceAll('_', ' ')}</p><p className="mt-2 line-clamp-3 text-sm text-slate-600">{dataset.description}</p><button onClick={() => onChoose(exampleFor(dataset))} className="mt-3 text-left text-sm font-semibold text-emerald-700 hover:underline">Try: “{exampleFor(dataset)}”</button></article>)}</div>{filtered.length === 0 && <p className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">No matching datasets. Try a broader topic such as population, employment, prices, income, or health.</p>}{limit < filtered.length && <button onClick={() => setLimit((current) => current + 8)} className="mt-4 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-emerald-400">Show 8 more</button>}</>}</details>
+  return <details className="mt-8 rounded-2xl border border-slate-200 bg-white p-5"><summary className="flex cursor-pointer list-none items-center justify-between gap-4"><span><span className="flex items-center gap-2 font-bold"><Database size={18} className="text-emerald-700" /> What can I ask?</span><span className="mt-1 block text-sm font-normal text-slate-500">Search {datasets?.length ? `${datasets.length} ` : ''}registered official datasets and try a plain-language example.</span></span><ChevronDown className="shrink-0" /></summary>{loading && <p className="mt-4 text-sm text-slate-500">Loading available data…</p>}{!loading && <><div className="mt-5"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Common topics</p><div className="mt-2 flex flex-wrap gap-2">{friendlyTopics.map((topic) => <button key={topic.label} onClick={() => { setDomain(topic.domain); setSearch(''); setLimit(8) }} className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${domain === topic.domain ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300 bg-white text-slate-700 hover:border-emerald-400'}`}><span aria-hidden="true">{topic.icon}</span> {topic.label}</button>)}</div><div className="mt-2 flex flex-wrap gap-2">{friendlyTopics.slice(0, 3).map((topic) => <button key={topic.question} onClick={() => onChoose(topic.question)} className="text-left text-xs font-medium text-emerald-700 hover:underline">Try: “{topic.question}”</button>)}</div></div><div className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_14rem]"><label className="relative"><span className="sr-only">Search datasets</span><Search className="pointer-events-none absolute left-3 top-3 text-slate-400" size={17} /><input value={search} onChange={(event) => { setSearch(event.target.value); setLimit(8) }} placeholder="Search population, prices, jobs…" className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-emerald-500" /></label><label><span className="sr-only">Filter by topic</span><select value={domain} onChange={(event) => { setDomain(event.target.value); setLimit(8) }} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-emerald-500"><option value="all">All topics</option>{domains.map((item) => <option key={item} value={item}>{item.replaceAll('_', ' ')}</option>)}</select></label></div><p className="mt-3 text-xs text-slate-600">Showing {Math.min(filtered.length, limit)} of {filtered.length} matching datasets.</p><div className="mt-4 grid gap-3 sm:grid-cols-2">{filtered.slice(0, limit).map((dataset) => <article key={dataset.dataset_id} className="rounded-xl border border-slate-200 p-4"><h3 className="font-semibold">{dataset.title}</h3><p className="mt-1 text-xs capitalize text-slate-600">{dataset.geography_level} · {dataset.frequency} · {dataset.domain.replaceAll('_', ' ')}</p><p className="mt-2 line-clamp-3 text-sm text-slate-600">{dataset.description}</p><button onClick={() => onChoose(exampleFor(dataset))} className="mt-3 text-left text-sm font-semibold text-emerald-700 hover:underline">Try: “{exampleFor(dataset)}”</button></article>)}</div>{filtered.length === 0 && <p className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">No matching datasets. Try a broader topic such as population, employment, prices, income, or health.</p>}{limit < filtered.length && <button onClick={() => setLimit((current) => current + 8)} className="mt-4 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-emerald-400">Show 8 more</button>}</>}</details>
 }
 
 function WorkingState({ snapshot, connected, elapsed, onCancel }: { snapshot: RunSnapshot; connected: boolean; elapsed: number; onCancel: () => void }) {
@@ -267,7 +334,7 @@ export default function App() {
   const endRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const conversations = useQuery({ queryKey: ['conversations'], queryFn: api.listConversations, refetchInterval: () => { const run = queryClient.getQueryData<RunSnapshot>(['run', selectedId]); return run && ['queued', 'running'].includes(run.status) ? 5000 : 30000 }, refetchIntervalInBackground: false, enabled: !sharedRunId })
-  const health = useQuery({ queryKey: ['health'], queryFn: api.health, refetchInterval: 30000, refetchIntervalInBackground: false, retry: false })
+  const health = useQuery({ queryKey: ['health'], queryFn: api.health, refetchInterval: (query) => (query.state.data?.busy ? 3000 : 30000), refetchIntervalInBackground: false, retry: false })
   const datasets = useQuery({ queryKey: ['datasets'], queryFn: api.datasets, staleTime: 5 * 60 * 1000 })
   const selected = useQuery({ queryKey: ['run', selectedId], queryFn: () => api.getRun(selectedId!), enabled: !!selectedId, refetchInterval: (query) => (query.state.error && isNotFound(query.state.error) ? false : selectedId && ['queued', 'running'].includes(query.state.data?.status ?? '') ? 5000 : false), retry: false })
   const conversation = useQuery({ queryKey: ['conversation', conversationId], queryFn: () => api.getConversation(conversationId!), enabled: !!conversationId && !sharedRunId, refetchInterval: (query) => (query.state.error && isNotFound(query.state.error) ? false : conversationId && ['queued', 'running'].includes(query.state.data?.turns.at(-1)?.status ?? '') ? 5000 : false), retry: false })
@@ -322,15 +389,16 @@ export default function App() {
   const deleteConversation = useMutation({ mutationFn: api.deleteConversation, onSuccess: (_, id) => { if (conversationId === id) { setConversationId(null); setSelectedId(null) }; void queryClient.invalidateQueries({ queryKey: ['conversations'] }) } })
   const snapshot = selected.data
   const active = snapshot && ['queued', 'running'].includes(snapshot.status)
-  const submit = () => { if (question.trim() && !create.isPending) create.mutate(question.trim()) }
+  const submit = () => { if (question.trim() && !create.isPending && !active) create.mutate(question.trim()) }
   const startNew = () => { window.history.replaceState({}, '', window.location.pathname); setConversationId(null); setSelectedId(null); setQuestion(''); setSidebarOpen(false) }
 
   return <div className="min-h-screen bg-slate-50 text-slate-900">
-    <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:hidden"><button aria-label="Open recent chats" onClick={() => setSidebarOpen(true)}><Menu /></button><span className="font-bold">TanyaDOSM</span><span className="w-6" /></header>
+    <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:hidden"><button aria-label="Open recent chats" onClick={() => setSidebarOpen(true)}><Menu /></button><span className="font-bold">TanyaDOSM</span><span className="flex items-center gap-1.5 text-xs text-slate-500" aria-label="Service availability">{active || health.data?.busy ? <><LoaderCircle size={14} className="animate-spin text-amber-500" />Busy</> : <><span className="h-2 w-2 rounded-full bg-emerald-500" />Free</>}</span></header>
     <div className="grid min-h-screen lg:grid-cols-[280px_minmax(0,1fr)]">
       <aside className={`${sidebarOpen ? 'fixed inset-0 z-30 block' : 'hidden'} border-r border-slate-200 bg-slate-950 text-white lg:static lg:block`}><div className="flex h-full flex-col p-5 lg:sticky lg:top-0 lg:h-screen">
         <div className="flex items-center justify-between"><div className="flex items-center gap-3"><BarChart3 className="text-emerald-400" /><div><p className="text-xl font-bold">TanyaDOSM</p><p className="text-xs text-slate-400">Official data, explained</p></div></div><button className="lg:hidden" aria-label="Close recent chats" onClick={() => setSidebarOpen(false)}><X /></button></div>
-        <div className="mt-7 space-y-2 text-xs text-slate-400" aria-label="Service availability"><div className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${health.data?.llm === 'ready' ? 'bg-emerald-400' : 'bg-amber-400'}`} />Answer service: {health.data?.llm === 'ready' ? 'available' : 'limited'}</div><div className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${health.data?.catalogue === 'ready' ? 'bg-emerald-400' : 'bg-amber-400'}`} />Official data: {health.data?.catalogue === 'ready' ? 'available' : 'limited'}</div><div className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${health.data?.embeddings === 'ready' ? 'bg-emerald-400' : 'bg-slate-500'}`} />Enhanced search: {health.data?.embeddings === 'ready' ? 'available' : 'using standard search'}</div></div>
+        <div className="mt-7"><ServiceAvailability health={health.data} active={!!active} /></div>
+        <div className="mt-4 space-y-2 text-xs text-slate-400" aria-label="Service availability"><div className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${health.data?.llm === 'ready' ? 'bg-emerald-400' : 'bg-amber-400'}`} />Answer service: {health.data?.llm === 'ready' ? 'available' : 'limited'}</div><div className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${health.data?.catalogue === 'ready' ? 'bg-emerald-400' : 'bg-amber-400'}`} />Official data: {health.data?.catalogue === 'ready' ? 'available' : 'limited'}</div><div className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${health.data?.embeddings === 'ready' ? 'bg-emerald-400' : 'bg-slate-500'}`} />Enhanced search: {health.data?.embeddings === 'ready' ? 'available' : 'using standard search'}</div></div>
         <button onClick={startNew} className="mt-7 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950">New chat</button>
         {!sharedRunId && <><h2 className="mt-10 flex items-center gap-2 text-sm font-semibold text-slate-300"><Clock3 size={16} /> Recent chats</h2><nav className="mt-4 flex-1 space-y-3 overflow-y-auto" aria-label="Recent chats">{conversations.data?.map((chat) => <div key={chat.id} className={`group rounded-xl ${conversationId === chat.id ? 'bg-slate-800' : 'hover:bg-slate-900'}`}><button onClick={() => { setConversationId(chat.id); setSelectedId(null); setSidebarOpen(false) }} className="w-full p-4 text-left text-sm"><div className="line-clamp-2 pr-10">{chat.title}</div><div className="mt-2.5 flex items-center justify-between"><StatusPill status={chat.latest_status} /><span className="text-xs text-slate-400">{formatChatDate(chat.updated_at)} · {chat.turn_count} {chat.turn_count === 1 ? 'turn' : 'turns'}</span></div></button><div className="-mt-12 mb-2 mr-2 flex justify-end gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100"><button aria-label={`Rename ${chat.title}`} onClick={() => { const title = window.prompt('Rename this chat', chat.title)?.trim(); if (title) rename.mutate({ id: chat.id, title }) }} className="rounded p-1.5 text-slate-400 hover:bg-slate-700 hover:text-white"><Pencil size={14} /></button><button aria-label={`Delete ${chat.title}`} onClick={() => { if (window.confirm('Delete this chat and all its turns?')) deleteConversation.mutate(chat.id) }} className="rounded p-1.5 text-slate-400 hover:bg-red-950 hover:text-red-300"><Trash2 size={14} /></button></div></div>)}{!conversations.data?.length && <p className="py-4 text-sm text-slate-500">No chats yet.</p>}</nav><p className="mt-5 text-xs leading-relaxed text-slate-400">Chats expire after seven days. Each question is answered independently from official data.</p></>}
       </div></aside>
@@ -341,7 +409,7 @@ export default function App() {
         {sharedRunId && selected.isError && <FriendlyFailure error="This shared result was not found or has expired." question="" onRetry={startNew} />}
         {sharedRunId && snapshot && <article className="rounded-2xl border border-slate-200 bg-white p-5"><div className="mb-4 rounded-xl bg-slate-100 p-4 text-slate-800"><span className="text-xs font-semibold uppercase text-slate-500">Question</span><p className="mt-1">{snapshot.question}</p></div>{snapshot.answer && !snapshot.answer.error ? <Results answer={snapshot.answer} runId={snapshot.id} question={snapshot.question} /> : <FriendlyFailure error={snapshot.answer?.error || snapshot.error} question={snapshot.question} onRetry={startNew} />}</article>}
         {!sharedRunId && conversation.data?.turns.map((turn) => <div key={turn.id} className="mb-6 space-y-3"><div className="ml-auto max-w-2xl rounded-2xl bg-slate-900 p-4 text-white">{turn.question}</div><article className={`rounded-2xl border bg-white p-4 sm:p-5 ${selectedId === turn.id ? 'border-emerald-400 shadow-sm' : 'border-slate-200'}`}><button onClick={() => setSelectedId(turn.id)} className="mb-4 flex w-full items-center justify-between text-left"><StatusPill status={turn.status} /><span className="text-xs font-medium text-slate-600">Why you can trust this</span></button>{turn.answer && !turn.answer.error ? <Results answer={turn.answer} runId={turn.id} question={turn.question} onFollowUp={(value) => { setQuestion(value); textareaRef.current?.focus() }} /> : turn.answer?.error || ['failed', 'interrupted'].includes(turn.status) ? <FriendlyFailure error={turn.answer?.error || turn.error} question={turn.question} onRetry={() => { setQuestion(turn.question); textareaRef.current?.focus() }} /> : <p className="text-sm text-slate-500">Preparing this answer…</p>}{['completed', 'failed', 'interrupted'].includes(turn.status) && <button aria-label="Delete this turn" onClick={() => { if (window.confirm('Delete this turn?')) remove.mutate(turn.id) }} className="mt-4 text-xs text-slate-500 hover:text-red-600"><Trash2 className="inline" size={13} /> Delete turn</button>}</article></div>)}
-        {!sharedRunId && <><form className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm" onSubmit={(event) => { event.preventDefault(); submit() }}><label htmlFor="question" className="sr-only">Question</label><textarea ref={textareaRef} id="question" value={question} maxLength={500} onChange={(event) => setQuestion(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); submit() } }} placeholder={conversationId ? 'Ask another question…' : 'What would you like to know?'} className="min-h-24 w-full resize-none p-3 outline-none" /><div className="flex items-center justify-between border-t border-slate-100 pt-3"><span className="text-xs text-slate-600">Enter to ask · Shift+Enter for a new line · {question.length}/500</span><button disabled={!question.trim() || create.isPending} className="flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2 font-semibold text-white disabled:opacity-40"><Send size={16} />{create.isPending ? 'Submitting…' : 'Ask'}</button></div></form>{create.error && <FriendlyFailure error={create.error.message} question={question} onRetry={() => textareaRef.current?.focus()} />}{!conversationId && <section className="mt-8"><h2 className="text-sm font-semibold text-slate-600">Start with a common task</h2><div className="mt-3 grid gap-3 sm:grid-cols-2">{examples.map((example) => <button key={example.label} onClick={() => { setQuestion(example.question); textareaRef.current?.focus() }} className="rounded-xl border border-slate-200 bg-white p-4 text-left hover:border-emerald-400"><span className="flex items-center gap-2 text-sm font-semibold text-emerald-800"><FileQuestion size={16} />{example.label}</span><span className="mt-2 block text-sm text-slate-600">{example.question}</span></button>)}</div></section>}{active && <WorkingState snapshot={snapshot} connected={stream.connected} elapsed={elapsed} onCancel={() => { if (window.confirm('Cancel this queued request?')) cancel.mutate(snapshot.id) }} />}{snapshot && <ProcessDetails events={stream.events} snapshot={snapshot} />}<DatasetGuide datasets={datasets.data} loading={datasets.isLoading} onChoose={(value) => { setQuestion(value); textareaRef.current?.focus() }} /></>}
+        {!sharedRunId && <><form className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm" onSubmit={(event) => { event.preventDefault(); submit() }}><label htmlFor="question" className="sr-only">Question</label>{!active && health.data?.busy && <p className="mb-2 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900"><LoaderCircle size={13} className="animate-spin" />Another question is being processed. Yours will wait in line.</p>}<textarea ref={textareaRef} id="question" value={question} maxLength={500} onChange={(event) => setQuestion(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); submit() } }} placeholder={conversationId ? 'Ask another question…' : 'What would you like to know?'} className="min-h-24 w-full resize-none p-3 outline-none" /><div className="flex items-center justify-between border-t border-slate-100 pt-3"><span className="text-xs text-slate-600">{active ? 'Your previous question is still running…' : `Enter to ask · Shift+Enter for a new line · ${question.length}/500`}</span><button disabled={!question.trim() || create.isPending || !!active} className="flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2 font-semibold text-white disabled:opacity-40"><Send size={16} />{create.isPending ? 'Submitting…' : active ? 'Busy' : 'Get answer'}</button></div></form>{!conversationId && <QuestionTips />}{create.error && <FriendlyFailure error={create.error.message} question={question} onRetry={() => textareaRef.current?.focus()} />}{!conversationId && <GettingStarted onChoose={(value) => { setQuestion(value); textareaRef.current?.focus() }} />}{active && <WorkingState snapshot={snapshot} connected={stream.connected} elapsed={elapsed} onCancel={() => { if (window.confirm('Cancel this queued request?')) cancel.mutate(snapshot.id) }} />}{snapshot && <ProcessDetails events={stream.events} snapshot={snapshot} />}<DatasetGuide datasets={datasets.data} loading={datasets.isLoading} onChoose={(value) => { setQuestion(value); textareaRef.current?.focus() }} /></>}
         <div ref={endRef} />
       </div></main>
     </div>

@@ -106,6 +106,8 @@ export interface HealthStatus {
   catalogue: string
   llm: string
   embeddings: string
+  busy?: boolean
+  queue_depth?: number
 }
 
 export interface DatasetDefinition {
