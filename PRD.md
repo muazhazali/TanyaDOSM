@@ -5,8 +5,28 @@
 **Product name:** TanyaDOSM  
 **Working title alternatives:** DOSMChat, StatMY  
 **Document type:** Product Requirements Document  
-**Version:** 0.1  
-**Status:** Draft / MVP Planning
+**Version:** 0.2  
+**Status:** MVP implemented (see Implementation Status below)
+
+TanyaDOSM is a conversational data assistant for Malaysia's OpenDOSM public statistics platform.
+
+---
+
+# 0. Implementation Status (current)
+
+The product described in this PRD is now implemented and running. Where the design intent below differs from what shipped, treat **this section** as authoritative.
+
+- **UI stack:** React 19 + Vite (`frontend`), not Streamlit. The interface streams sanitized LangGraph node status over Server-Sent Events, and supports conversations with rename/delete, run sharing, CSV download, feedback, a dataset guide, charts, and tables.
+- **Backend:** FastAPI + a single-worker queue over an aiosqlite run store, exposing the HTTP API in the README.
+- **Catalogue:** `data/catalogue.json` holds **169 curated datasets** across 12 domains (demography, labour markets, prices, national accounts, households, education, environment, economic sectors, public safety, statistical indicators, data dictionaries, metadata). The MVP's "10–15 datasets" target is exceeded.
+- **Runtime:** Python 3.14.x (not 3.11+). Dependencies are managed with `uv`.
+- **Models:** Ollama Cloud OpenAI-compatible endpoint, default chat model `gpt-oss:120b`. Cloudflare Workers AI embeddings (`@cf/baai/bge-m3`) are used for semantic catalogue ranking, with a deterministic lexical fallback when unconfigured.
+- **Intent routing:** `QuestionIntent.kind` selects one of three lanes — `data` (statistics), `capability` (what data exists / greetings), and `project` (questions about the assistant, answered only from curated `data/assistant-facts.json`). This extends the original single-lane design.
+- **Graceful matching:** vague-but-answerable questions proceed with an **assumptions** note rather than being refused. Tunable via `ASKDOSM_MIN_MATCH_SCORE` and `ASKDOSM_CLARIFICATION_GAP`; filler words are filtered during lexical search.
+- **Conversational context:** each question remains standalone for analysis, but the UI can resolve a follow-up into a standalone question from bounded prior turns before the graph runs.
+- **Still out of scope (as planned):** multi-dataset joins, forecasting, causal inference, user accounts, and autonomous code execution.
+
+The sections below retain the original design rationale. Concrete numbers and node names in them are historical intent; the shipped graph adds `answer_capability`, `answer_project`, and `graceful_failure` nodes alongside the data pipeline.
 
 TanyaDOSM is a conversational data assistant for Malaysia's OpenDOSM public statistics platform.
 
@@ -550,6 +570,11 @@ Output:
 QuestionIntent
 ```
 
+`QuestionIntent.kind` then routes to one of three lanes: `data` (the pipeline below), `capability`
+(list available catalogue domains), or `project` (curated assistant facts from
+`data/assistant-facts.json`). The `capability` and `project` lanes terminate in dedicated answer
+nodes (`answer_capability`, `answer_project`) that never touch statistical data.
+
 ---
 
 ## Node 2 — `search_catalogue`
@@ -870,8 +895,8 @@ For MVP, FAISS or Chroma is sufficient.
 
 ```text
 +-------------------------+
-|       Streamlit UI      |
-|     Chat + Charts       |
+|     React + Vite UI      |
+|   Chat + Charts + SSE    |
 +------------+------------+
              |
              v
@@ -906,8 +931,8 @@ For MVP, FAISS or Chroma is sufficient.
 
 ## Application
 
-- Python 3.11+
-- Streamlit
+- Python 3.14+
+- React 19 + Vite (deployed as a static bundle served by FastAPI)
 
 ## Agent Framework
 
@@ -1185,7 +1210,7 @@ for benchmark questions.
 The MVP is complete when:
 
 - [ ] User can submit a natural-language question.
-- [ ] At least 10 OpenDOSM datasets are supported.
+- [x] At least 10 OpenDOSM datasets are supported. (169 curated datasets shipped)
 - [ ] Dataset discovery works without requiring the dataset name.
 - [ ] The system can query by year.
 - [ ] The system can query by state.
@@ -1292,15 +1317,16 @@ answer
 
 ---
 
-## Phase 6 — Streamlit Interface
+## Phase 6 — Web Interface
 
-Implement:
+Implemented as a React + Vite SPA (not Streamlit). Features:
 
-- chat
-- tables
-- charts
-- data source display
+- streaming node status over SSE
+- chat with conversations (rename/delete) and follow-ups
+- tables and charts
+- data source display and a dataset guide
 - expandable execution details
+- run sharing, CSV download, and feedback
 
 ---
 
