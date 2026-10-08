@@ -242,12 +242,16 @@ class TanyaDOSMService:
         self.graph = build_graph(services)
         self.llm = llm
 
-    def resolve_question(self, question: str, history: list[dict[str, str]]) -> str:
+    def resolve_question(self, question: str, history: list[dict[str, Any]]) -> str:
         """Resolve a follow-up using a small, trusted-context prompt."""
         if not history:
             return question.strip()
+        turns = [
+            {key: value for key, value in turn.items() if value is not None}
+            for turn in history[-6:]
+        ]
         resolver = self.llm.with_structured_output(ContextResolution)
-        context = {"previous_turns": history[-6:], "latest_user_message": question.strip()}
+        context = {"previous_turns": turns, "latest_user_message": question.strip()}
         result = resolver.invoke([
             ("system", CONTEXT_SYSTEM),
             ("human", json.dumps(context, ensure_ascii=False)),

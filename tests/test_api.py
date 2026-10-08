@@ -15,9 +15,11 @@ from askdosm.providers import HostedProviderError
 
 class FakeService:
     resolved = []
+    histories = []
 
     def resolve_question(self, question, history):
         assert history[-1]["assistant"] == "A validated answer"
+        self.histories.append(history)
         resolved = f"Resolved: {question}"
         self.resolved.append(resolved)
         return resolved
@@ -29,7 +31,18 @@ class FakeService:
             event_sink({"type": "intent", "node": "parse_question", "payload": {"language": "en"}})
             event_sink({"type": "candidates", "node": "search_catalogue", "payload": [{"dataset_id": "population_malaysia"}]})
             event_sink({"type": "node.completed", "node": "parse_question", "duration_ms": 1.5, "payload": {}})
-        return AnswerPayload(answer="A validated answer")
+        return AnswerPayload(
+            answer="A validated answer",
+            source={
+                "dataset_id": "population_malaysia",
+                "title": "Population of Malaysia",
+                "agency": "DOSM",
+                "url": "https://data.gov.my",
+                "period": "2025-01-01 to 2025-12-01",
+                "unit": "thousand people",
+            },
+            visualization={"kind": "line", "x": "date", "y": "population"},
+        )
 
 
 def api_settings(tmp_path: Path) -> Settings:
@@ -68,6 +81,7 @@ def test_api_validates_question(tmp_path):
 
 def test_follow_up_reuses_conversation_and_persists_resolved_question(tmp_path):
     FakeService.resolved.clear()
+    FakeService.histories.clear()
     app = create_app(api_settings(tmp_path), service_factory=FakeService)
     with TestClient(app) as client:
         first = client.post("/api/runs", json={"question": "Population in Johor in 2025?"}).json()
@@ -92,6 +106,12 @@ def test_follow_up_reuses_conversation_and_persists_resolved_question(tmp_path):
     ]
     assert snapshot["resolved_question"] == "Resolved: What about Selangor?"
     assert FakeService.resolved == ["Resolved: What about Selangor?"]
+    enriched = FakeService.histories[-1][-1]
+    assert enriched["dataset_id"] == "population_malaysia"
+    assert enriched["dataset_title"] == "Population of Malaysia"
+    assert enriched["metric"] == "population"
+    assert enriched["unit"] == "thousand people"
+    assert enriched["period"] == "2025-01-01 to 2025-12-01"
 
 
 def test_follow_up_rejects_unknown_conversation(tmp_path):

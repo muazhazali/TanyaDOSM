@@ -170,7 +170,7 @@ class RunStore:
         summary = self._conversation_summary(conversation[0])
         return ConversationSnapshot(**summary.model_dump(), turns=[self._snapshot(row) for row in turns])
 
-    async def get_context(self, conversation_id: str, *, exclude_run_id: str, limit: int = 6) -> list[dict[str, str]]:
+    async def get_context(self, conversation_id: str, *, exclude_run_id: str, limit: int = 6) -> list[dict[str, Any]]:
         async with aiosqlite.connect(self.path) as db:
             db.row_factory = aiosqlite.Row
             rows = await db.execute_fetchall(
@@ -182,7 +182,18 @@ class RunStore:
         result = []
         for row in reversed(rows):
             answer = AnswerPayload.model_validate_json(row["answer_json"])
-            result.append({"user": row["question"], "resolved": row["resolved_question"] or row["question"], "assistant": answer.answer})
+            source = answer.source
+            context: dict[str, Any] = {
+                "user": row["question"],
+                "resolved": row["resolved_question"] or row["question"],
+                "assistant": answer.answer,
+                "dataset_id": source.dataset_id if source else None,
+                "dataset_title": source.title if source else None,
+                "metric": answer.visualization.y,
+                "unit": source.unit if source else None,
+                "period": source.period if source else None,
+            }
+            result.append(context)
         return result
 
     async def set_resolved_question(self, run_id: str, resolved_question: str) -> None:
