@@ -167,6 +167,7 @@ Invoke-RestMethod -Method Post http://localhost:8000/api/catalogue-monitor/check
 | `ASKDOSM_ENABLE_MULTI_DATASET` | `true` | Allow questions that combine more than one dataset |
 | `ASKDOSM_MAX_PLAN_STEPS` | `3` | Maximum steps in a multi-dataset plan |
 | `ASKDOSM_MAX_JOIN_ROWS` | `50000` | Row-count guard for a combined result |
+| `ASKDOSM_NATURAL_PROJECT_ANSWERS` | `true` | Rephrase project/capability answers naturally from curated facts (grounded, with fallback) |
 | `ASKDOSM_CORS_ORIGINS` | local Vite origins | Comma-separated development origins |
 
 Project questions are answered from `data/assistant-facts.json` (path configurable as `assistant_facts_path`). Add entries there (aliases + English/Malay text) to extend what the assistant can say about itself — no code change required.

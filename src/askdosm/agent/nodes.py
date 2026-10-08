@@ -10,7 +10,7 @@ from typing import Any, Protocol
 
 import pandas as pd
 
-from askdosm.agent.prompts import INTENT_SYSTEM, MULTI_PLAN_SYSTEM, PLAN_SYSTEM
+from askdosm.agent.prompts import INTENT_SYSTEM, MULTI_PLAN_SYSTEM, PLAN_SYSTEM, PROJECT_ANSWER_SYSTEM
 from askdosm.agent.state import AgentState
 from askdosm.analysis import analyze, _records as combined_records
 from askdosm.catalogue import Catalogue, Embedder, JoinRegistry
@@ -22,6 +22,7 @@ from askdosm.models import (
     AnswerPayload,
     CombineHow,
     CombineSpec,
+    ComposedAnswer,
     ExecutionTrace,
     IntentKind,
     MultiPlan,
@@ -59,6 +60,7 @@ class NodeServices:
     enable_multi_dataset: bool = True
     max_plan_steps: int = 3
     max_join_rows: int = 50_000
+    natural_project_answers: bool = True
 
 
 def parse_question(state: AgentState, services: NodeServices) -> dict:
@@ -143,6 +145,14 @@ def answer_capability(state: AgentState, services: NodeServices) -> dict:
             f'"{examples[0]}" for the latest figure.'
         )
 
+    facts_text = (
+        f"The assistant can answer questions about official Malaysian public statistics "
+        f"from {len(datasets)} curated DOSM datasets. Available domains and dataset counts: {domain_text}. "
+        f"Users should ask about one measure, one place, and one time period. "
+        f"One example question is: \"{examples[0]}\"."
+    )
+    answer_text = _compose_project_answer(state, services, facts_text, answer_text)
+
     payload = AnswerPayload(
         answer=answer_text,
         follow_ups=[
@@ -192,6 +202,42 @@ def _match_fact(question: str, facts: list[dict[str, Any]]) -> dict[str, Any] | 
     return best
 
 
+def _numbers_in(text: str) -> set[str]:
+    return {token.replace(",", "") for token in re.findall(r"\d[\d,]*\.?\d*", text)}
+
+
+def _compose_project_answer(
+    state: AgentState, services: NodeServices, facts_text: str, fallback: str
+) -> str:
+    """Rewrite a reply from curated facts only. Falls back to the curated text.
+
+    The model may rephrase but must not invent. Any number it states must also
+    appear in the supplied facts, otherwise the curated fallback is returned.
+    """
+    if not services.natural_project_answers or not facts_text.strip():
+        return fallback
+    language = "Bahasa Melayu" if (state.get("intent") and state["intent"].language.value == "ms") else "English"
+    context = {
+        "question": state["question"],
+        "language": language,
+        "facts": facts_text,
+    }
+    try:
+        composer = services.llm.with_structured_output(ComposedAnswer)
+        composed = composer.invoke(
+            [("system", PROJECT_ANSWER_SYSTEM), ("human", json.dumps(context, ensure_ascii=False))]
+        )
+    except Exception:
+        return fallback
+    candidate = composed.answer.strip()
+    if not candidate:
+        return fallback
+    # Grounding guard: numbers must come from the facts.
+    if not _numbers_in(candidate).issubset(_numbers_in(facts_text)):
+        return fallback
+    return candidate
+
+
 def answer_project(state: AgentState, services: NodeServices) -> dict:
     """Answer questions about the assistant/project from curated facts only."""
     intent = state.get("intent")
@@ -201,7 +247,8 @@ def answer_project(state: AgentState, services: NodeServices) -> dict:
     if fact is None:
         # No curated fact matches: fall back to the catalogue-grounded capability answer.
         return answer_capability(state, services)
-    answer_text = fact.get("answer_ms" if language == "ms" else "answer_en") or fact.get("answer_en", "")
+    curated = fact.get("answer_ms" if language == "ms" else "answer_en") or fact.get("answer_en", "")
+    answer_text = _compose_project_answer(state, services, curated, curated)
     payload = AnswerPayload(
         answer=answer_text,
         follow_ups=[

@@ -45,7 +45,7 @@ pnpm --dir frontend test / typecheck / lint / build
 
 - `data` (default) — a statistics question: search catalogue → select → inspect → plan → execute → validate → answer.
 - `capability` — greetings / "what data do you have": `answer_capability` lists catalogue domains from metadata.
-- `project` — questions about the assistant itself ("what model are you", "where does the data come from", "is this accurate"): `answer_project` answers **only** from curated `data/assistant-facts.json` (EN/MS). Unmatched project questions fall back to the capability answer. Never free-generate project facts — add/edit entries in that JSON file instead.
+- `project` — questions about the assistant itself ("what model are you", "where does the data come from", "is this accurate"): `answer_project` answers **only** from curated `data/assistant-facts.json` (EN/MS). Unmatched project questions fall back to the capability answer. Project/capability replies are rephrased by the LLM from the curated facts (`ASKDOSM_NATURAL_PROJECT_ANSWERS`, default on) with a grounding guard that rejects any number not present in the facts and falls back to the curated text. Never free-generate project facts — add/edit entries in that JSON file instead.
 
 Matching strictness is tunable: `ASKDOSM_MIN_MATCH_SCORE` (default `0.10`) is the floor for a plausible dataset match; `ASKDOSM_CLARIFICATION_GAP` (default `0.03`) controls when a cross-domain near-tie asks for clarification. Vague-but-answerable questions proceed with an **assumptions** note on the answer payload rather than being refused. Filler words are filtered in `catalogue.search_lexical` (`STOPWORDS`).
 

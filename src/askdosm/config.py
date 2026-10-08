@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     enable_multi_dataset: bool = True
     max_plan_steps: int = 3
     max_join_rows: int = 50_000
+    natural_project_answers: bool = True
     catalogue_path: Path = Path("data/catalogue.json")
     assistant_facts_path: Path = Path("data/assistant-facts.json")
     joins_path: Path = Path("data/joins.json")

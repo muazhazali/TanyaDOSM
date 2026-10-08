@@ -237,6 +237,7 @@ class TanyaDOSMService:
             enable_multi_dataset=self.settings.enable_multi_dataset,
             max_plan_steps=self.settings.max_plan_steps,
             max_join_rows=self.settings.max_join_rows,
+            natural_project_answers=self.settings.natural_project_answers,
         )
         self.graph = build_graph(services)
         self.llm = llm

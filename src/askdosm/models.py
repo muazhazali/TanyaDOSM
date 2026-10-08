@@ -326,3 +326,10 @@ class ContextResolution(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     standalone_question: str = Field(min_length=1, max_length=500)
+
+
+class ComposedAnswer(BaseModel):
+    """A natural-language answer composed only from supplied, verified facts."""
+
+    model_config = ConfigDict(extra="forbid")
+    answer: str = Field(min_length=1, max_length=1500)

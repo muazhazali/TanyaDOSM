@@ -8,7 +8,7 @@ from askdosm.agent.nodes import NodeServices
 from askdosm.agent.nodes import build_query_plan, generate_response
 from askdosm.catalogue import Catalogue
 from askdosm.models import (
-    AnalysisResult, CombineHow, CombineSpec, ContextResolution, FilterSpec, IntentKind,
+    AnalysisResult, CombineHow, CombineSpec, ComposedAnswer, ContextResolution, FilterSpec, IntentKind,
     MultiPlan, Operation, PlanStep, QueryPlan, QuestionIntent, StepKind,
     ValidationResult, VisualizationSpec,
 )
@@ -325,3 +325,47 @@ def test_multi_dataset_non_whitelisted_join_is_refused(tmp_path):
     state = build_graph(services).invoke({"question": "population per unemployment", "retry_count": 0, "errors": []})
     assert state["answer"].error
     assert "whitelisted" in state["answer"].answer
+
+
+class ProjectFakeLLM:
+    def __init__(self, intent, composed):
+        self.values = {QuestionIntent: intent, ComposedAnswer: composed}
+        self.usage = None
+
+    def with_structured_output(self, schema):
+        return FakeRunnable(self.values[schema])
+
+
+def _project_services(tmp_path, composed, *, natural=True):
+    return NodeServices(
+        catalogue=Catalogue(Path("data/catalogue.json")), cache=FakeCache(pd.DataFrame()),
+        llm=ProjectFakeLLM(QuestionIntent(kind=IntentKind.PROJECT), composed),
+        embedder=None, embedding_cache_dir=tmp_path,
+        assistant_facts_path=Path("data/assistant-facts.json"), natural_project_answers=natural,
+    )
+
+
+def test_project_answer_is_rephrased_from_facts(tmp_path):
+    composed = ComposedAnswer(
+        answer="I'm a helper for official Malaysian statistics; the numbers always come from DOSM data."
+    )
+    services = _project_services(tmp_path, composed, natural=True)
+    state = build_graph(services).invoke({"question": "who are you", "retry_count": 0, "errors": []})
+    assert state["answer"].error is None
+    assert "helper for official Malaysian statistics" in state["answer"].answer
+
+
+def test_project_answer_falls_back_when_disabled(tmp_path):
+    composed = ComposedAnswer(answer="This should not be used.")
+    services = _project_services(tmp_path, composed, natural=False)
+    state = build_graph(services).invoke({"question": "who are you", "retry_count": 0, "errors": []})
+    assert "This should not be used." not in state["answer"].answer
+    assert "TanyaDOSM" in state["answer"].answer
+
+
+def test_project_answer_falls_back_when_ungrounded(tmp_path):
+    composed = ComposedAnswer(answer="I was built in 1999 by a team of 57 people.")
+    services = _project_services(tmp_path, composed, natural=True)
+    state = build_graph(services).invoke({"question": "who are you", "retry_count": 0, "errors": []})
+    assert "1999" not in state["answer"].answer
+    assert "TanyaDOSM" in state["answer"].answer
